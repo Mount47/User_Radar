@@ -190,22 +190,23 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
 
 .hero,
 .focus-card {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(236, 245, 255, 0.92));
+  border-radius: 24px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
   padding: 1.8rem;
-  color: #111827;
+  color: #0f172a;
   display: flex;
   justify-content: space-between;
   gap: 2rem;
   flex-wrap: wrap;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.12);
 }
 
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.2em;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #94a3b8;
 }
 
 .muted {
@@ -235,18 +236,19 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
 
 .status-card {
   padding: 1rem;
-  border-radius: 20px;
-  background: rgba(12, 15, 28, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
 }
 
 .status-card.warning {
-  border-color: rgba(248, 113, 113, 0.4);
+  border-color: rgba(248, 113, 113, 0.25);
 }
 
 .status-card p {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(15, 23, 42, 0.55);
 }
 
 .status-card strong {
@@ -274,10 +276,11 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
 
 .history,
 .detection {
-  background: rgba(12, 15, 28, 0.85);
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.93);
+  border-radius: 20px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
   padding: 1.2rem;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
 }
 
 .chart-row {
@@ -286,7 +289,7 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
 }
 
 .chart-row > div {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(248, 250, 252, 0.9);
   border-radius: 18px;
   padding: 0.8rem;
 }

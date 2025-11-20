@@ -131,11 +131,11 @@ onBeforeUnmount(() => {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 1.5rem;
-  padding: 0.8rem 1.5rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(12, 15, 28, 0.85);
-  box-shadow: 0 15px 35px rgba(2, 6, 23, 0.5);
+  padding: 0.9rem 1.4rem;
+  border-radius: 22px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 255, 0.9));
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
 }
 
 .brand {
@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #f97316, #f43f5e);
+  background: linear-gradient(135deg, #6ee7f3, #a855f7);
 }
 
 .brand-meta {
@@ -159,11 +159,12 @@ onBeforeUnmount(() => {
 
 .brand-meta strong {
   font-size: 1rem;
+  color: #0f172a;
 }
 
 .brand-meta span {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(15, 23, 42, 0.45);
 }
 
 .nav-actions {
@@ -178,20 +179,20 @@ onBeforeUnmount(() => {
   gap: 0.4rem;
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .search svg {
   width: 16px;
   height: 16px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(15, 23, 42, 0.6);
 }
 
 .search input {
   border: none;
   background: transparent;
-  color: #fff;
+  color: #0f172a;
   outline: none;
   width: 120px;
 }
@@ -201,9 +202,9 @@ onBeforeUnmount(() => {
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f4f4ff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 252, 0.95);
+  color: #0f172a;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -212,8 +213,8 @@ onBeforeUnmount(() => {
 }
 
 .icon-btn:hover {
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(15, 23, 42, 0.2);
+  background: #fff;
 }
 
 .icon-btn svg {
@@ -233,8 +234,8 @@ onBeforeUnmount(() => {
   padding: 0 4px;
   font-size: 0.7rem;
   border-radius: 999px;
-  background: #f97316;
-  color: #05060a;
+  background: #f43f5e;
+  color: #fff;
   font-weight: 600;
 }
 
@@ -246,9 +247,9 @@ onBeforeUnmount(() => {
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.5), rgba(14, 165, 233, 0.5));
-  color: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(135deg, rgba(110, 231, 243, 0.55), rgba(168, 85, 247, 0.55));
+  color: #0f172a;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -268,10 +269,10 @@ onBeforeUnmount(() => {
   width: 190px;
   padding: 1rem;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(3, 7, 18, 0.9);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 20px 55px rgba(2, 6, 23, 0.65);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.2);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -284,7 +285,7 @@ onBeforeUnmount(() => {
 
 .account-role {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(15, 23, 42, 0.55);
 }
 
 .account-action {
@@ -292,8 +293,8 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 999px;
   padding: 0.4rem 0.8rem;
-  background: linear-gradient(135deg, #f97316, #f43f5e);
-  color: #fff;
+  background: linear-gradient(135deg, #6ee7f3, #a855f7);
+  color: #0f172a;
   cursor: pointer;
   font-weight: 600;
 }
