@@ -4,9 +4,14 @@ import { useUserStore } from '@/store/user'
 
 const store = useUserStore()
 
+const managedDevices = computed(() => (store.deviceDirectory.length ? store.deviceDirectory : store.devices))
+
 onMounted(() => {
   if (!store.devices.length) {
     store.refreshDevices()
+  }
+  if (!store.deviceDirectory.length) {
+    store.refreshDeviceDirectory({ size: 100 })
   }
   if (!store.deviceOverview) {
     store.refreshDeviceOverview()
@@ -26,7 +31,7 @@ const onlineRate = computed(() => {
 })
 
 const latestDevices = computed(() => {
-  return [...store.devices]
+  return [...managedDevices.value]
     .sort((a, b) => new Date(b.lastHeartbeat || 0).getTime() - new Date(a.lastHeartbeat || 0).getTime())
     .slice(0, 5)
 })
@@ -67,7 +72,7 @@ const comparisonSeries = computed(() => {
 })
 
 const detailDevices = computed(() => {
-  return store.devices.slice(0, 6).map((device) => ({
+  return managedDevices.value.slice(0, 6).map((device) => ({
     ...device,
     heartbeat: device.lastHeartbeat
       ? new Date(device.lastHeartbeat).toLocaleString()
@@ -77,7 +82,7 @@ const detailDevices = computed(() => {
 })
 
 const changeLabel = computed(() => {
-  const base = overview.value?.online ?? store.devices.length
+  const base = overview.value?.online ?? managedDevices.value.length
   const delta = base ? Math.min(25, Math.max(6, Math.round(base * 0.2))) : 0
   return `+${delta} 台，相比上个月` 
 })

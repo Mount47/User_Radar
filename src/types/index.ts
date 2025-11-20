@@ -46,6 +46,19 @@ export interface CaregiverDevice {
   lastHeartbeat?: string
 }
 
+export interface PersonDeviceMapping {
+  mappingId: string
+  personId: string
+  personName?: string
+  deviceId: string
+  deviceName?: string
+  modelType?: string
+  status: DeviceStatus
+  createdAt?: string
+  updatedAt?: string
+  location?: string
+}
+
 export interface CaregiverAlert {
   alertId: number
   personId: string
@@ -115,4 +128,5 @@ export interface DetectionSummary {
   fallRisk?: boolean
   anomalyTag?: string
   updatedAt: string
+  lastUpdateTime?: string
 }

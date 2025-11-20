@@ -7,6 +7,7 @@ import type {
   DetectionSummary,
   DeviceStatusOverview,
   HistoryBucket,
+  PersonDeviceMapping,
   RealtimeSnapshot,
   VitalDataPoint
 } from '@/types'
@@ -22,8 +23,56 @@ import {
   mockFetchDeviceOverview,
   mockFetchDetections,
   mockLogin,
-  mockUpdateAlertStatus
+  mockUpdateAlertStatus,
+  mockFetchPersonDirectory,
+  mockFetchDeviceDirectory,
+  mockFetchMappings
 } from '@/mock/dataService'
+
+const DEFAULT_HISTORY_HOURS = 24
+
+function resolveRange(hours = DEFAULT_HISTORY_HOURS) {
+  const end = new Date()
+  const start = new Date(end.getTime() - hours * 60 * 60 * 1000)
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
+function buildBucketsFromPoints(points: VitalDataPoint[], hours: number): HistoryBucket[] {
+  const buckets: Record<string, HistoryBucket> = {}
+  const ordered = [...points].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  )
+
+  ordered.forEach((point) => {
+    const hour = new Date(point.timestamp)
+    hour.setMinutes(0, 0, 0)
+    const key = hour.toISOString()
+    if (!buckets[key]) {
+      buckets[key] = {
+        timestamp: key,
+        heartRateAvg: 0,
+        breathRateAvg: 0,
+        motionAvg: 0,
+        eventCount: 0
+      }
+    }
+    buckets[key].heartRateAvg += Number(point.heartRate ?? 0)
+    buckets[key].breathRateAvg += Number(point.breathRate ?? 0)
+    buckets[key].motionAvg += Number(point.motion ?? 0)
+    buckets[key].eventCount += 1
+  })
+
+  const limitTs = new Date().getTime() - hours * 60 * 60 * 1000
+  return Object.values(buckets)
+    .filter((bucket) => new Date(bucket.timestamp).getTime() >= limitTs)
+    .map((bucket) => ({
+      ...bucket,
+      heartRateAvg: bucket.eventCount ? bucket.heartRateAvg / bucket.eventCount : 0,
+      breathRateAvg: bucket.eventCount ? bucket.breathRateAvg / bucket.eventCount : 0,
+      motionAvg: bucket.eventCount ? bucket.motionAvg / bucket.eventCount : 0
+    }))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+}
 
 export interface LoginResponse {
   token: string
@@ -96,9 +145,17 @@ export async function fetchCaregiverAlerts(limit = 20, filters: AlertQuery = {})
   }
 }
 
-export async function fetchPersonHistory(personId: string): Promise<VitalDataPoint[]> {
+export async function fetchPersonHistory(
+  personId: string,
+  hours = DEFAULT_HISTORY_HOURS,
+  deviceId?: string
+): Promise<VitalDataPoint[]> {
+  const { start, end } = resolveRange(hours)
   try {
-    const { data } = await client.get<VitalDataPoint[]>(`/persons/${personId}/history`)
+    const target = deviceId
+      ? `/ti6843/vital/data/historical/device/${deviceId}/timerange`
+      : `/ti6843/vital/data/person/${personId}/data/timerange`
+    const { data } = await client.get<VitalDataPoint[]>(target, { params: { start, end } })
     return data ?? []
   } catch (error) {
     console.warn('获取历史趋势失败，使用模拟数据回退', error)
@@ -108,7 +165,9 @@ export async function fetchPersonHistory(personId: string): Promise<VitalDataPoi
 
 export async function fetchRealtimeSnapshot(personId: string): Promise<RealtimeSnapshot> {
   try {
-    const { data } = await client.get<RealtimeSnapshot>(`/persons/${personId}/realtime`)
+    const { data } = await client.get<RealtimeSnapshot>(
+      `/ti6843/vital/data/person/${personId}/realtime`
+    )
     return data ?? ({} as RealtimeSnapshot)
   } catch (error) {
     console.warn('获取实时数据失败，使用模拟数据回退', error)
@@ -116,10 +175,14 @@ export async function fetchRealtimeSnapshot(personId: string): Promise<RealtimeS
   }
 }
 
-export async function fetchHistoryBuckets(personId: string): Promise<HistoryBucket[]> {
+export async function fetchHistoryBuckets(
+  personId: string,
+  hours = DEFAULT_HISTORY_HOURS,
+  deviceId?: string
+): Promise<HistoryBucket[]> {
   try {
-    const { data } = await client.get<HistoryBucket[]>(`/persons/${personId}/history/buckets`)
-    return data ?? []
+    const points = await fetchPersonHistory(personId, hours, deviceId)
+    return buildBucketsFromPoints(points, hours)
   } catch (error) {
     console.warn('获取历史统计失败，使用模拟数据回退', error)
     return mockFetchHistoryBuckets(personId)
@@ -138,8 +201,14 @@ export async function fetchDeviceStatusOverview(): Promise<DeviceStatusOverview>
 
 export async function fetchDetectionSummaries(): Promise<DetectionSummary[]> {
   try {
-    const { data } = await client.get<DetectionSummary[]>('/detections/summary')
-    return data
+    const { data } = await client.get<DetectionSummary[]>(
+      '/detection/status/with-person'
+    )
+    return data?.map((item) => ({
+      ...item,
+      detectionId: item.detectionId || `${item.deviceId}-${item.personId || 'unbound'}`,
+      updatedAt: item.updatedAt || item.lastUpdateTime || new Date().toISOString()
+    }))
   } catch (error) {
     console.warn('检测概览接口不可用，使用模拟数据回退', error)
     return mockFetchDetections()
@@ -153,5 +222,44 @@ export async function updateAlertStatus(alertId: number, status: AlertStatus): P
   } catch (error) {
     console.warn('更新告警状态失败，使用模拟数据回退', error)
     return mockUpdateAlertStatus(alertId, status)
+  }
+}
+
+export async function fetchPersonDirectory(): Promise<CaregiverPerson[]> {
+  try {
+    const { data } = await client.get<CaregiverPerson[]>('/persons')
+    return data ?? []
+  } catch (error) {
+    console.warn('获取人员管理列表失败，使用模拟数据回退', error)
+    return mockFetchPersonDirectory()
+  }
+}
+
+export async function fetchDeviceDirectory(params?: {
+  page?: number
+  size?: number
+  modelType?: string
+  status?: string
+  location?: string
+}): Promise<CaregiverDevice[]> {
+  try {
+    const { data } = await client.get<any>('/radar/devices', { params })
+    if (Array.isArray(data)) return data
+    if (Array.isArray(data?.content)) return data.content
+    if (Array.isArray(data?.items)) return data.items
+    return []
+  } catch (error) {
+    console.warn('获取设备管理列表失败，使用模拟数据回退', error)
+    return mockFetchDeviceDirectory()
+  }
+}
+
+export async function fetchPersonDeviceMappings(): Promise<PersonDeviceMapping[]> {
+  try {
+    const { data } = await client.get<PersonDeviceMapping[]>('/person-device-mappings')
+    return data ?? []
+  } catch (error) {
+    console.warn('获取绑定关系失败，使用模拟数据回退', error)
+    return mockFetchMappings()
   }
 }

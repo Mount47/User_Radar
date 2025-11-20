@@ -21,6 +21,7 @@ interface MappingRow {
 const palette = ['#8b5cf6', '#0ea5e9', '#f472b6', '#f59e0b', '#10b981', '#14b8a6']
 
 const store = useUserStore()
+const mappingSource = computed(() => (store.mappings.length ? store.mappings : []))
 const searchTerm = ref('')
 const statusFilter = ref<StatusFilter>('ALL')
 const page = ref(1)
@@ -30,6 +31,15 @@ const selectedRows = ref<string[]>([])
 onMounted(() => {
   if (!store.devices.length) {
     store.refreshDevices()
+  }
+  if (!store.deviceDirectory.length) {
+    store.refreshDeviceDirectory({ size: 100 })
+  }
+  if (!store.personDirectory.length) {
+    store.refreshPersonDirectory()
+  }
+  if (!store.mappings.length) {
+    store.refreshMappings()
   }
 })
 
@@ -53,25 +63,44 @@ function formatLastUpdated(value?: string): string {
 const mappingRows = computed<MappingRow[]>(() => {
   const rows: MappingRow[] = []
   let colorIndex = 0
-  store.devices.forEach((device) => {
-    const persons = device.persons?.length ? device.persons : [{ personId: 'NA', personName: '未绑定设备' }]
-    persons.forEach((person, personIdx) => {
-      const paletteValue = palette[(colorIndex + personIdx) % palette.length]
-      const accent = paletteValue ?? '#8b5cf6'
+  const data = mappingSource.value.length ? mappingSource.value : store.devices
+  data.forEach((mapping) => {
+    const paletteValue = palette[colorIndex % palette.length]
+    const accent = paletteValue ?? '#8b5cf6'
+    if ('mappingId' in mapping) {
       rows.push({
-        id: `${device.deviceId}-${person.personId || personIdx}`,
-        userId: person.personId || '未登记',
-        userName: person.personName || '未分配',
-        deviceType: device.modelType,
-        deviceId: device.deviceId,
-        deviceName: device.deviceName,
-        mappingName: `${device.deviceName}-${person.personName || 'Mapping'}`,
-        state: device.status,
-        lastUpdated: formatLastUpdated(device.lastHeartbeat || store.profile?.serverTime || ''),
+        id: mapping.mappingId,
+        userId: mapping.personId || '未登记',
+        userName: mapping.personName || '未分配',
+        deviceType: mapping.modelType || '未知型号',
+        deviceId: mapping.deviceId,
+        deviceName: mapping.deviceName || '未知设备',
+        mappingName: `${mapping.deviceName || mapping.deviceId}-${mapping.personName || 'Mapping'}`,
+        state: mapping.status,
+        lastUpdated: formatLastUpdated(mapping.updatedAt || mapping.createdAt),
         accent
       })
-    })
-    colorIndex += 1
+      colorIndex += 1
+    } else {
+      const device = mapping
+      const persons = device.persons?.length ? device.persons : [{ personId: 'NA', personName: '未绑定设备' }]
+      persons.forEach((person, personIdx) => {
+        const color = palette[(colorIndex + personIdx) % palette.length]
+        rows.push({
+          id: `${device.deviceId}-${person.personId || personIdx}`,
+          userId: person.personId || '未登记',
+          userName: person.personName || '未分配',
+          deviceType: device.modelType,
+          deviceId: device.deviceId,
+          deviceName: device.deviceName,
+          mappingName: `${device.deviceName}-${person.personName || 'Mapping'}`,
+          state: device.status,
+          lastUpdated: formatLastUpdated(device.lastHeartbeat || store.profile?.serverTime || ''),
+          accent: color ?? '#8b5cf6'
+        })
+      })
+      colorIndex += 1
+    }
   })
   return rows
 })

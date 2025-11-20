@@ -4,6 +4,8 @@ import { useUserStore } from '@/store/user'
 
 const store = useUserStore()
 
+const people = computed(() => (store.personDirectory.length ? store.personDirectory : store.persons))
+
 const keyword = ref('')
 const tableKeyword = ref('')
 const genderFilter = ref<'all' | 'M' | 'F'>('all')
@@ -12,13 +14,16 @@ const page = ref(1)
 const pageSize = 5
 
 onMounted(() => {
-  if (!store.persons.length) {
+  if (!people.value.length) {
     store.hydrateScope()
+  }
+  if (!store.personDirectory.length) {
+    store.refreshPersonDirectory()
   }
 })
 
 const departments = computed(() => {
-  const values = Array.from(new Set(store.persons.map((person) => person.department).filter(Boolean)))
+  const values = Array.from(new Set(people.value.map((person) => person.department).filter(Boolean)))
   return ['all', ...values]
 })
 
@@ -26,7 +31,7 @@ const filtered = computed(() => {
   const globalTerm = keyword.value.trim().toLowerCase()
   const listTerm = tableKeyword.value.trim().toLowerCase()
 
-  return store.persons.filter((person) => {
+  return people.value.filter((person) => {
     const baseTarget = `${person.personName} ${person.department} ${person.personId}`.toLowerCase()
     const deviceTarget = person.devices.map((device) => `${device.deviceId} ${device.deviceName}`.toLowerCase()).join(' ')
     const matchesKeyword = !globalTerm || baseTarget.includes(globalTerm) || deviceTarget.includes(globalTerm)
@@ -59,8 +64,8 @@ const pageRangeLabel = computed(() => {
   return `Showing ${start}-${end} of ${filtered.value.length}`
 })
 
-const totalUsers = computed(() => store.persons.length)
-const activeUsers = computed(() => store.persons.filter((person) => person.devices.length > 0).length)
+const totalUsers = computed(() => people.value.length)
+const activeUsers = computed(() => people.value.filter((person) => person.devices.length > 0).length)
 const inactiveUsers = computed(() => Math.max(0, totalUsers.value - activeUsers.value))
 const activeRate = computed(() => {
   if (!totalUsers.value) return 0
@@ -68,7 +73,7 @@ const activeRate = computed(() => {
 })
 
 const genderStats = computed(() => {
-  return store.persons.reduce(
+  return people.value.reduce(
     (acc, person) => {
       acc[person.gender] += 1
       return acc
@@ -98,10 +103,10 @@ const ageBuckets = computed(() => {
     { label: '81+', min: 81, max: Infinity }
   ]
   return config.map((bucket) => {
-    const male = store.persons.filter(
+    const male = people.value.filter(
       (person) => person.gender === 'M' && person.age >= bucket.min && person.age <= bucket.max
     ).length
-    const female = store.persons.filter(
+    const female = people.value.filter(
       (person) => person.gender === 'F' && person.age >= bucket.min && person.age <= bucket.max
     ).length
     return { ...bucket, male, female, total: male + female }
@@ -109,7 +114,7 @@ const ageBuckets = computed(() => {
 })
 
 const newUsers = computed(() => {
-  const tagged = store.persons.filter((person) =>
+  const tagged = people.value.filter((person) =>
     (person.tags || []).some((tag) => /new|新|recent/i.test(tag))
   ).length
   if (tagged) return tagged
@@ -124,8 +129,8 @@ const newRate = computed(() => {
 
 const sparklinePoints = computed(() => {
   const fallback = [20, 35, 45, 30, 50, 65, 48, 72]
-  if (!store.persons.length) return fallback
-  return store.persons.slice(0, 8).map((person, index) => {
+  if (!people.value.length) return fallback
+  return people.value.slice(0, 8).map((person, index) => {
     const normalized = (person.age % 50) + 20 + (index % 3) * 5
     return Math.min(90, normalized)
   })
