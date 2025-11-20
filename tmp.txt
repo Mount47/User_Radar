@@ -1,0 +1,754 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useUserStore } from '@/store/user'
+
+const store = useUserStore()
+const activeTab = ref<'vitals' | 'posture'>('vitals')
+
+onMounted(() => {
+  if (!store.persons.length) {
+    store.hydrateScope()
+  } else {
+    store.fetchRealtimeForSelection()
+    if (store.activePerson?.personId) {
+      store.fetchHistoryForSelection(store.activePerson.personId)
+    }
+  }
+  if (!store.detectionSummaries.length) {
+    store.refreshDetections()
+  }
+})
+
+function onSelectChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  store.selectPerson(target.value)
+}
+
+const historySlice = computed(() => {
+  const person = store.activePerson
+  if (!person) return []
+  const data = store.histories[person.personId] || []
+  return data.slice(-40)
+})
+
+const chartPaths = computed(() => {
+  const data = historySlice.value
+  if (!data.length) return { heart: '', breath: '' }
+  const values = {
+    heart: data.map((item) => Number(item.heartRate ?? 0)),
+    breath: data.map((item) => Number(item.breathRate ?? 0))
+  }
+  const all = [...values.heart, ...values.breath]
+  const max = Math.max(...all, 0)
+  const min = Math.min(...all, 0)
+  const range = Math.max(1, max - min)
+  const build = (series: number[]) => {
+    if (!series.length) return ''
+    const step = series.length > 1 ? 100 / (series.length - 1) : 0
+    return series
+      .map((value, index) => {
+        const normalized = (value - min) / range
+        const y = 100 - normalized * 100
+        const x = index * step
+        return `${index === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
+      })
+      .join(' ')
+  }
+  return {
+    heart: build(values.heart),
+    breath: build(values.breath)
+  }
+})
+
+const trendDeltas = computed(() => {
+  const data = historySlice.value
+  if (data.length < 2) {
+    return { heart: 0, breath: 0 }
+  }
+  const last = data[data.length - 1]!
+  const prev = data[data.length - 2]!
+  return {
+    heart: Number(last.heartRate ?? 0) - Number(prev.heartRate ?? 0),
+    breath: Number(last.breathRate ?? 0) - Number(prev.breathRate ?? 0)
+  }
+})
+
+const monitoringStatus = computed(() => {
+  if (!store.activeRealtime) return { label: '未知', detail: '等待设备上线' }
+  return store.activeRealtime.occupancy
+    ? { label: '有人在场', detail: '当前检测到有人体活�? }
+    : { label: '无人占床', detail: '未检测到在床人员' }
+})
+
+const exceptionAlerts = computed(() => {
+  return store.scopedAlerts.slice(0, 4).map((alert) => ({
+    id: alert.alertId,
+    userName: alert.personName || store.activePerson?.personName || '未知人员',
+    deviceId: alert.deviceId,
+    deviceName: alert.alertType || alert.category || '告警',
+    description: alert.description || alert.alertType || '有异常需要处�?,
+    severity: alert.severity
+  }))
+})
+
+const exceptionSummary = computed(() => ({
+  total: store.scopedAlerts.length,
+  critical: store.scopedAlerts.filter((item) => item.severity === 'CRITICAL' || item.severity === 'HIGH').length
+}))
+
+const activeDevice = computed(() => {
+  const person = store.activePerson
+  if (!person) return null
+  const bound = person.devices[0]
+  if (bound?.deviceId) {
+    return (
+      store.devices.find((device) => device.deviceId === bound.deviceId) || {
+        deviceId: bound.deviceId,
+        deviceName: bound.deviceName,
+        modelType: bound.modelType || 'N/A',
+        status: 'ONLINE',
+        lastHeartbeat: store.profile?.serverTime || ''
+      }
+    )
+  }
+  return store.devices.find((device) => device.persons?.some((item) => item.personId === person.personId)) || null
+})
+
+const postureDetection = computed(() => {
+  const personId = store.activePerson?.personId
+  if (!personId) return null
+  return store.detectionSummaries.find(
+    (item) => item.personId === personId && item.detectionType === 'POSTURE'
+  )
+})
+
+function formatDate(value?: string) {
+  if (!value) return '暂无'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
+}
+</script>
+
+<template>
+  <section class="realtime-page" v-if="store.activePerson">
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">实时监测</p>
+        <h1>实时数据监控中心</h1>
+        <p class="muted">切换不同模式可查看呼吸心跳或人体位姿的即时状态�?/p>
+      </div>
+      <div class="controls">
+        <label class="select-field">
+          <span>选择人员</span>
+          <select v-model="store.selectedPersonId" @change="onSelectChange">
+            <option v-for="person in store.persons" :key="person.personId" :value="person.personId">
+              {{ person.personName }} · {{ person.devices[0]?.deviceName || '未绑�? }}
+            </option>
+          </select>
+        </label>
+        <div class="tab-bar">
+          <button type="button" :class="{ active: activeTab === 'vitals' }" @click="activeTab = 'vitals'">
+            呼吸心跳
+          </button>
+          <button type="button" :class="{ active: activeTab === 'posture' }" @click="activeTab = 'posture'">
+            人体位姿
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div v-if="activeTab === 'vitals'" class="tab-panel">
+      <div class="main-grid">
+        <article class="card chart-card">
+          <div class="chart-head">
+            <div>
+              <p class="eyebrow">Real-time data waveform chart</p>
+              <h2>实时波形</h2>
+            </div>
+            <div class="chart-legend">
+              <span><i class="dot heart"></i> Heartbeat</span>
+              <span><i class="dot breath"></i> Respiratory</span>
+            </div>
+          </div>
+          <div class="chart-body" v-if="historySlice.length">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="heartStroke" x1="0%" x2="100%">
+                  <stop offset="0%" stop-color="#f43f5e"></stop>
+                  <stop offset="100%" stop-color="#fb7185"></stop>
+                </linearGradient>
+                <linearGradient id="breathStroke" x1="0%" x2="100%">
+                  <stop offset="0%" stop-color="#a855f7"></stop>
+                  <stop offset="100%" stop-color="#38bdf8"></stop>
+                </linearGradient>
+              </defs>
+              <path :d="chartPaths.heart" stroke="url(#heartStroke)" fill="none" stroke-width="2.5"></path>
+              <path :d="chartPaths.breath" stroke="url(#breathStroke)" fill="none" stroke-width="2.5"></path>
+            </svg>
+          </div>
+          <p v-else class="empty">等待设备推送实时波�?..</p>
+        </article>
+
+        <aside class="info-stack">
+          <article class="card info-card">
+            <header>
+              <span>人员信息</span>
+              <strong>{{ store.activePerson.personName }}</strong>
+            </header>
+            <dl>
+              <div>
+                <dt>人员 ID</dt>
+                <dd>{{ store.activePerson.personId }}</dd>
+              </div>
+              <div>
+                <dt>性别</dt>
+                <dd>{{ store.activePerson.gender === 'M' ? '�? : '�? }}</dd>
+              </div>
+              <div>
+                <dt>所属科�?/dt>
+                <dd>{{ store.activePerson.department }}</dd>
+              </div>
+              <div>
+                <dt>标签</dt>
+                <dd>{{ store.activePerson.tags?.[0] || '未设�? }}</dd>
+              </div>
+              <div>
+                <dt>最近采�?/dt>
+                <dd>{{ formatDate(store.activePerson.latestOverview?.collectedAt) }}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="card info-card" v-if="activeDevice">
+            <header>
+              <span>设备信息</span>
+              <strong>{{ activeDevice.deviceName }}</strong>
+            </header>
+            <dl>
+              <div>
+                <dt>Device ID</dt>
+                <dd>{{ activeDevice.deviceId }}</dd>
+              </div>
+              <div>
+                <dt>类型</dt>
+                <dd>{{ activeDevice.modelType }}</dd>
+              </div>
+              <div>
+                <dt>状�?/dt>
+                <dd>{{ activeDevice.status }}</dd>
+              </div>
+              <div>
+                <dt>最近心�?/dt>
+                <dd>{{ formatDate(activeDevice.lastHeartbeat) }}</dd>
+              </div>
+            </dl>
+          </article>
+          <article v-else class="card info-card muted-card">
+            <p>暂无设备绑定，请检查硬件状态�?/p>
+          </article>
+        </aside>
+      </div>
+
+      <div class="status-layout">
+        <div class="status-grid">
+          <article class="card mini-card">
+            <p>占床状�?/p>
+            <strong>{{ monitoringStatus.label }}</strong>
+            <span>{{ monitoringStatus.detail }}</span>
+          </article>
+          <article class="card mini-card">
+            <p>异常数量</p>
+            <strong>{{ exceptionSummary.total }}</strong>
+            <span>{{ exceptionSummary.critical }} 条高优先级待处理</span>
+          </article>
+          <article class="card mini-card">
+            <p>呼吸次数</p>
+            <strong>{{ store.activeRealtime?.breathRate ?? '--' }} �?�?/strong>
+            <span :class="{ up: trendDeltas.breath >= 0, down: trendDeltas.breath < 0 }">
+              {{ trendDeltas.breath >= 0 ? '+' : '' }}{{ trendDeltas.breath }} vs 上一�?            </span>
+          </article>
+          <article class="card mini-card">
+            <p>心率</p>
+            <strong>{{ store.activeRealtime?.heartRate ?? '--' }} �?�?/strong>
+            <span :class="{ up: trendDeltas.heart >= 0, down: trendDeltas.heart < 0 }">
+              {{ trendDeltas.heart >= 0 ? '+' : '' }}{{ trendDeltas.heart }} vs 上一�?            </span>
+          </article>
+        </div>
+
+        <article class="card alert-table">
+          <header>
+            <div>
+              <p>异常告警列表</p>
+              <span>Primary notification example</span>
+            </div>
+            <button type="button">去处�?/button>
+          </header>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>人员</th>
+                  <th>设备 ID</th>
+                  <th>设备名称</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in exceptionAlerts" :key="item.id">
+                  <td>{{ item.userName }}</td>
+                  <td>{{ item.deviceId }}</td>
+                  <td>{{ item.deviceName }}</td>
+                  <td>{{ item.description }}</td>
+                </tr>
+                <tr v-if="!exceptionAlerts.length">
+                  <td colspan="4">暂无异常记录</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <div v-else class="tab-panel">
+      <div class="posture-main">
+        <article class="card point-card">
+          <header>
+            <p class="eyebrow">3D image point cloud</p>
+            <span>下图为示例，可接入真实点�?/span>
+          </header>
+          <div class="point-placeholder">
+            <div class="axis">
+              <span>时间 (s)</span>
+              <span>距离 (m)</span>
+              <span>速度 (m/s)</span>
+            </div>
+            <p>3D 点云示意 · 可替换为实时渲染</p>
+          </div>
+          <small>如需其他展示，可在此拓展�?/small>
+        </article>
+        <div class="posture-side">
+          <article class="card posture-status">
+            <header>
+              <span>人体姿态状�?/span>
+              <button type="button">监测�?/button>
+            </header>
+            <p>当前状态：<strong>{{ postureDetection?.posture || store.activeRealtime?.posture || '未知' }}</strong></p>
+            <ul>
+              <li>行走</li>
+              <li>跌�?/li>
+              <li>站立</li>
+              <li>坐下</li>
+            </ul>
+          </article>
+          <article class="card posture-icons">
+            <p>其他状�?/p>
+            <div class="icons">
+              <span>�?/span>
+              <span>�?/span>
+              <span>�?/span>
+              <span>�?/span>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="info-row">
+        <article class="card info-card">
+          <header>
+            <span>人员信息</span>
+            <strong>{{ store.activePerson.personName }}</strong>
+          </header>
+          <dl>
+            <div>
+              <dt>User ID</dt>
+              <dd>{{ store.activePerson.personId }}</dd>
+            </div>
+            <div>
+              <dt>Gender</dt>
+              <dd>{{ store.activePerson.gender === 'M' ? '�? : '�? }}</dd>
+            </div>
+            <div>
+              <dt>身份标签</dt>
+              <dd>{{ store.activePerson.tags?.[0] || '未设�? }}</dd>
+            </div>
+            <div>
+              <dt>创建时间</dt>
+              <dd>{{ formatDate(store.activePerson.latestOverview?.collectedAt) }}</dd>
+            </div>
+          </dl>
+        </article>
+        <article class="card info-card" v-if="activeDevice">
+          <header>
+            <span>设备信息</span>
+            <strong>{{ activeDevice.deviceName }}</strong>
+          </header>
+          <dl>
+            <div>
+              <dt>Device ID</dt>
+              <dd>{{ activeDevice.deviceId }}</dd>
+            </div>
+            <div>
+              <dt>类型</dt>
+              <dd>{{ activeDevice.modelType }}</dd>
+            </div>
+            <div>
+              <dt>State</dt>
+              <dd>{{ activeDevice.status }}</dd>
+            </div>
+            <div>
+              <dt>最近更新时�?/dt>
+              <dd>{{ formatDate(activeDevice.lastHeartbeat) }}</dd>
+            </div>
+          </dl>
+        </article>
+      </div>
+
+      <article class="card alert-table">
+        <header>
+          <div>
+            <p>异常告警列表</p>
+            <span>Primary notification example</span>
+          </div>
+          <button type="button">去处�?/button>
+        </header>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>User_name</th>
+                <th>Device_id</th>
+                <th>Device_name</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in exceptionAlerts" :key="item.id">
+                <td>{{ item.userName }}</td>
+                <td>{{ item.deviceId }}</td>
+                <td>{{ item.deviceName }}</td>
+                <td>{{ item.description }}</td>
+              </tr>
+              <tr v-if="!exceptionAlerts.length">
+                <td colspan="4">暂无异常记录</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </section>
+  <p v-else class="empty">暂无人员，请先完成登录与授权�?/p>
+</template>
+
+<style scoped>
+:global(body) {
+  background: #f4f5fb;
+}
+
+.realtime-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  color: #0f172a;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.muted {
+  color: rgba(15, 23, 42, 0.6);
+  margin: 0;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.select-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.select-field select {
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 14px;
+  padding: 0.5rem 0.9rem;
+  background: #fff;
+}
+
+.tab-bar {
+  display: inline-flex;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.2rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.tab-bar button {
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.tab-bar button.active {
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee);
+  color: #fff;
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 28px;
+  padding: 1.5rem;
+  box-shadow: 0 25px 45px rgba(15, 23, 42, 0.08);
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: 1.2rem;
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 1rem;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-flex;
+  margin-right: 0.3rem;
+}
+
+.heart {
+  background: #fb7185;
+}
+
+.breath {
+  background: #a855f7;
+}
+
+.chart-body {
+  border: 1px dashed rgba(15, 23, 42, 0.1);
+  border-radius: 26px;
+  padding: 1rem;
+  background: #f9fafb;
+}
+
+.chart-body svg {
+  width: 100%;
+  height: 260px;
+}
+
+.info-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.info-card header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.info-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.info-card dt {
+  font-size: 0.75rem;
+  color: rgba(15, 23, 42, 0.5);
+}
+
+.info-card dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.muted-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.status-grid .mini-card + .mini-card {
+  margin-top: 0;
+}
+
+.mini-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.mini-card span.up {
+  color: #06b6d4;
+}
+
+.mini-card span.down {
+  color: #f97316;
+}
+
+.alert-table header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert-table header button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 1.1rem;
+  background: #f43f5e;
+  color: #fff;
+  cursor: pointer;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.8rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  text-align: left;
+}
+
+.posture-main {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr);
+  gap: 1rem;
+}
+
+.point-placeholder {
+  border: 1px dashed rgba(15, 23, 42, 0.2);
+  border-radius: 20px;
+  padding: 1rem;
+  text-align: center;
+  color: rgba(15, 23, 42, 0.6);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.posture-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.posture-status ul,
+.posture-icons .icons {
+  list-style: none;
+  padding: 0;
+  margin: 0.8rem 0 0;
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.posture-icons .icons span {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: #f1f5f9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 0.75rem;
+  color: rgba(15, 23, 42, 0.4);
+  margin: 0;
+}
+
+.empty {
+  text-align: center;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+@media (max-width: 960px) {
+  .main-grid,
+  .posture-main {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
