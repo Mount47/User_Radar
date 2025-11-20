@@ -167,12 +167,13 @@ function formatDate(value?: string) {
           <article class="card chart-card">
             <div class="chart-head">
               <div>
-                <p class="eyebrow">Real-time data waveform chart</p>
-                <h2>实时波形</h2>
+                <p class="eyebrow">实时波形趋势</p>
+                <h2>呼吸 · 心跳波形</h2>
+                <p class="muted">下图为实时波形变化，可对体征数据进行识别分析</p>
               </div>
               <div class="chart-legend">
-                <span><i class="dot heart"></i> Heartbeat</span>
-                <span><i class="dot breath"></i> Respiratory</span>
+                <span><i class="dot heart"></i> 心跳</span>
+                <span><i class="dot breath"></i> 呼吸</span>
               </div>
             </div>
             <div class="chart-body" v-if="historySlice.length">
@@ -196,7 +197,7 @@ function formatDate(value?: string) {
 
           <div class="status-grid inline">
             <article class="card mini-card">
-              <p>占床状态</p>
+              <p>监测状态</p>
               <strong>{{ monitoringStatus.label }}</strong>
               <span>{{ monitoringStatus.detail }}</span>
             </article>
@@ -260,7 +261,7 @@ function formatDate(value?: string) {
               </header>
               <dl>
                 <div>
-                  <dt>Device ID</dt>
+                  <dt>设备 ID</dt>
                   <dd>{{ activeDevice.deviceId }}</dd>
                 </div>
                 <div>
@@ -286,7 +287,7 @@ function formatDate(value?: string) {
             <header>
               <div>
                 <p>异常告警列表</p>
-                <span>Primary notification example</span>
+                <span>实时告警，及时查看</span>
               </div>
               <button type="button">去处理</button>
             </header>
@@ -321,45 +322,399 @@ function formatDate(value?: string) {
       <article class="card chart-card" v-if="postureDetection">
         <div class="chart-head">
           <div>
-            <p class="eyebrow">Posture monitoring</p>
-            <h2>Posture overview</h2>
-            <p class="muted">Last update · {{ formatDate(postureDetection.updatedAt) }}</p>
+            <p class="eyebrow">人体位姿监测</p>
+            <h2>位姿概览</h2>
+            <p class="muted">最新更新 · {{ formatDate(postureDetection.updatedAt) }}</p>
           </div>
           <div class="chart-legend">
-            <span>{{ postureDetection.fallRisk ? 'Fall risk detected' : 'Stable posture' }}</span>
+            <span>{{ postureDetection.fallRisk ? '检测到跌倒风险' : '姿态稳定' }}</span>
           </div>
         </div>
-        <div class="status-grid inline">
-          <article class="card mini-card">
-            <p>Current posture</p>
-            <strong>{{ postureDetection.posture || 'Unknown' }}</strong>
-            <span>Realtime inference</span>
-          </article>
-          <article class="card mini-card">
-            <p>Presence</p>
-            <strong>{{ postureDetection.presence ? 'On bed' : 'Not detected' }}</strong>
-            <span>{{ postureDetection.presence ? 'Occupancy confirmed' : 'No occupancy' }}</span>
-          </article>
-          <article class="card mini-card">
-            <p>Heart rate</p>
-            <strong>{{ postureDetection.heartRate ?? '--' }} bpm</strong>
-            <span>Sensor snapshot</span>
-          </article>
-          <article class="card mini-card">
-            <p>Breath rate</p>
-            <strong>{{ postureDetection.breathRate ?? '--' }} rpm</strong>
-            <span>Sensor snapshot</span>
-          </article>
+        <div class="posture-layout">
+          <div class="posture-visual">
+            <div class="posture-cloud">
+              <p>3D 点云示意</p>
+              <span>姿态检测实时云图</span>
+            </div>
+            <div class="posture-state">
+              <p>监测状态</p>
+              <strong>{{ postureDetection.posture || '未知' }}</strong>
+              <span>{{ postureDetection.presence ? '在床监测中' : '未检测到人体' }}</span>
+            </div>
+          </div>
+          <div class="status-grid inline">
+            <article class="card mini-card">
+              <p>位姿状态</p>
+              <strong>{{ postureDetection.posture || '未知' }}</strong>
+              <span>实时推理</span>
+            </article>
+            <article class="card mini-card">
+              <p>有人/无人</p>
+              <strong>{{ postureDetection.presence ? '有人' : '无人' }}</strong>
+              <span>{{ postureDetection.presence ? '监测中' : '未占床' }}</span>
+            </article>
+            <article class="card mini-card">
+              <p>心率</p>
+              <strong>{{ postureDetection.heartRate ?? '--' }} 次/分</strong>
+              <span>传感器快照</span>
+            </article>
+            <article class="card mini-card">
+              <p>呼吸</p>
+              <strong>{{ postureDetection.breathRate ?? '--' }} 次/分</strong>
+              <span>传感器快照</span>
+            </article>
+          </div>
         </div>
         <div class="posture-meta">
-          <p>Device · {{ postureDetection.deviceName }} · {{ postureDetection.deviceId }}</p>
-          <p>Person · {{ postureDetection.personName || store.activePerson.personName }}</p>
+          <p>设备 · {{ postureDetection.deviceName }} · {{ postureDetection.deviceId }}</p>
+          <p>人员 · {{ postureDetection.personName || store.activePerson.personName }}</p>
         </div>
       </article>
       <article v-else class="card chart-card muted-card">
-        <h2>No posture data yet</h2>
-        <p>Waiting for the device to publish the latest posture detection.</p>
+        <h2>暂未收到位姿数据</h2>
+        <p>等待设备推送最新的人体位姿检测结果。</p>
       </article>
     </div>
   </section>
 </template>
+
+<style scoped>
+.realtime-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 1.3rem 1.5rem;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(240, 245, 255, 0.92));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.select-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+.select-field select {
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+}
+
+.tab-bar {
+  display: inline-flex;
+  padding: 0.25rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.05);
+  gap: 0.3rem;
+}
+
+.tab-bar button {
+  border: none;
+  padding: 0.55rem 1.2rem;
+  border-radius: 12px;
+  background: transparent;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.tab-bar button.active {
+  background: linear-gradient(135deg, #6ee7f3, #a855f7);
+  color: #0b1020;
+  box-shadow: 0 10px 25px rgba(168, 85, 247, 0.25);
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.chart-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+
+.chart-card {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  color: #9ca3af;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  color: #475569;
+}
+
+.chart-legend .dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 0.25rem;
+}
+
+.chart-legend .heart {
+  background: linear-gradient(135deg, #f43f5e, #fb7185);
+}
+
+.chart-legend .breath {
+  background: linear-gradient(135deg, #a855f7, #22c55e);
+}
+
+.chart-body {
+  flex: 1;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.06), rgba(14, 165, 233, 0.04));
+  border-radius: 18px;
+  padding: 0.6rem;
+}
+
+.chart-body svg {
+  width: 100%;
+  height: 100%;
+}
+
+.empty {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.status-grid.inline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.mini-card {
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(237, 242, 255, 0.95));
+}
+
+.mini-card strong {
+  font-size: 1.4rem;
+}
+
+.mini-card span.up {
+  color: #16a34a;
+}
+
+.mini-card span.down {
+  color: #ef4444;
+}
+
+.info-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.info-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.8rem;
+}
+
+.info-card header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.info-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.info-card dt {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.info-card dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.muted-card {
+  color: #9ca3af;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.alert-table header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert-table header span {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.alert-table button {
+  border: none;
+  background: linear-gradient(135deg, #6ee7f3, #a855f7);
+  color: #0b1020;
+  padding: 0.4rem 0.9rem;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.table-wrapper {
+  overflow: auto;
+  margin-top: 0.6rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.4rem;
+}
+
+thead th {
+  color: #94a3b8;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+tbody tr + tr {
+  border-top: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.posture-panel .chart-card {
+  gap: 1rem;
+}
+
+.posture-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.posture-visual {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+}
+
+.posture-cloud {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(208, 229, 255, 0.9));
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  border-radius: 16px;
+  padding: 1rem;
+  text-align: center;
+  color: #4b5563;
+}
+
+.posture-cloud p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.posture-cloud span {
+  color: #94a3b8;
+}
+
+.posture-state {
+  background: #0f172a;
+  color: white;
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.posture-state span {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.posture-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: #6b7280;
+}
+
+@media (max-width: 1080px) {
+  .vitals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tab-bar {
+    align-self: flex-end;
+  }
+}
+</style>
