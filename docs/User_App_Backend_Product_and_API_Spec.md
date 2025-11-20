@@ -1,169 +1,114 @@
-# 用户端后台产品需求与接口文档
+# 管理端 & 用户端接口文档（全量能力）
 
-## 1. 产品背景与目标
-- 构建毫米波雷达人体监测产品的用户端后台，服务家庭/机构终端用户，实现人员生命体征、位姿、告警全流程闭环。
-- 后端基于 Spring Boot + JWT 鉴权，提供 REST API 供 Web/App 使用；管理员负责资源配置，普通用户仅能访问授权人员。
-- 设备覆盖 R60ABD1、R77ABH1、TI6843（呼吸心跳、位姿等），需兼顾实时监测、历史数据回看以及告警联动。
+> 目标：清晰区分管理员端与用户端的权限和接口范围，覆盖当前后端已实现的全部能力，前端可据此完成页面与交互开发。
 
-## 2. 用户端产品需求拆解
-### 2.1 用户登录
-- 用户以账号+密码登录，成功后获取 JWT、角色、token 过期时间、可访问人员数量。
-- 登录失败需返回 401 + 友好错误文案。
+## 0. 通用信息
+- **Base URL**：`/api`
+- **鉴权**：除登录外均需 `Authorization: Bearer <token>`；管理员接口使用 `hasRole('ADMIN')` 保护。
+- **角色差异**：
+  - **管理员端**：系统用户管理、审计日志、人员/设备/映射的全量 CRUD、批量操作、告警流转、数据清理等。
+  - **用户端**：查看自身授权范围内的人员/设备/告警/数据，执行与自己相关的实时/历史查询；不允许修改资源。
 
-### 2.2 人员管理
-- 列表、详情、搜索、按部门过滤。
-- 管理员可 CRUD；普通用户仅能读取被授权人员（由 AuthScopeService 约束）。
-
-### 2.3 设备管理
-- 支持分页列表、按型号/状态/位置筛选、注册、更新、删除、批量操作。
-- 删除前需校验是否存在活跃人员绑定。
-
-### 2.4 人员与设备绑定
-- 单个/批量/多设备绑定，支持查询绑定关系、按人/设备/型号过滤、停用/激活、清理失效映射。
-- 绑定操作需记录映射名、状态、创建时间；解绑或停用后可在历史记录中追踪。
-
-### 2.5 呼吸/心跳实时展示
-- 实时数据来源：R60ABD1、TI6843 Vital 等，接口需按设备或人员维度获取最新 N 条数据。
-- 数据需包含心率、呼吸率、体动、睡眠、置信度、时间戳，超量数据要裁剪。
-
-### 2.6 人体位姿实时展示
-- TI6843 Posture 提供点云/关键点数据；要求查询最新帧、区间数据、人员维度数据。
-- 需支持数据上传接口供网关推送。
-
-### 2.7 历史数据展示
-- 按设备/人员+时间范围查询历史点；部分接口支持分页（如 TI6843 Vital）。
-- 提供统计汇总（均值、极值、样本数）。
-
-### 2.8 异常警告
-- 呼吸心跳异常：/api/vitals-alerts 提供按设备/人员/时间范围过滤。
-- 跌倒/位姿异常：/api/fall-alerts 提供活跃告警、处理流转（待处理/已处理/误报）、统计接口。
-- 需要“我的”视图聚合近实时设备、人员、告警信息。
-
-### 2.9 设备状态总览
-- /api/device-status/overview 返回设备在线状态、心跳、绑定信息、统计数据；用于大屏或监控台。
-- /api/detection 系列接口根据不同雷达模型返回是否有人体、最新指标。
-
-## 3. 模块-接口对照
-| 模块 | 关键接口群 | 说明 |
-| --- | --- | --- |
-| 认证与权限 | AuthController, MeController, JwtTokenProvider | JWT 登录、个人视图、角色范围控制 |
-| 人员管理 | PersonController | CRUD、过滤、Scope 校验 |
-| 设备管理 | RadarDeviceController, DeviceStatusController | 设备 CRUD/统计、状态心跳、冲突处理 |
-| 绑定关系 | PersonDeviceMappingController | 单个/批量/多设备绑定、停用激活、查询 |
-| 呼吸心跳 | R60ABD1DataController, TI6843VitalController, TI6843VitalDataController | 设备管理+实时/历史/统计数据、人员维度查询 |
-| 位姿 | TI6843PostureController, TI6843PostureDataController | 设备 CRUD、数据上传、实时/历史查询 |
-| 检测概览 | PersonDetectionController, DeviceStatusController | 多模型检测状态、绑定人信息、设备心跳 |
-| 告警 | VitalsAlertController, FallAlertController | 呼吸心跳异常 & 跌倒告警管理 |
-
-## 4. 接口文档（节选用户端所需）
-> 通用要求：所有接口默认前缀 /api, 返回 JSON。除登录外需附带 Authorization: Bearer <token>。
-
-### 4.1 认证与个人视图
-- POST /api/auth/login
-  - 请求
-    ```json
-    {"username":"demo","password":"***"}
-    ```
-  - 响应：token, role, expiresIn, accessiblePersons。
-- GET /api/me/profile
-  - 返回登录用户信息、角色、管理对象等。
-- GET /api/me/persons
-  - 返回用户可见的人员列表（含绑定摘要）。
-- GET /api/me/devices
-  - 返回可见设备及绑定状态。
-- GET /api/me/alerts?limit=20
-  - 返回最近告警列表。
-
-### 4.2 人员管理 (PersonController)
-| 方法 | 路径 | 功能 | 备注 |
+## 1. 认证与个人视图
+| 方法 | 路径 | 说明 | 角色 |
 | --- | --- | --- | --- |
-| GET | /api/persons | 列表（管理员=全部，普通=授权内） | Scope 由 AuthScopeService 约束 |
-| GET | /api/persons/{personId} | 详情 | 未授权返回 403 |
-| POST | /api/persons | 新增（管理员） | 需 personId/personName |
-| PUT | /api/persons/{personId} | 更新（管理员） | personId 不可变 |
-| DELETE | /api/persons/{personId} | 删除（管理员） | 需无关联逻辑 |
-| GET | /api/persons/department/{department} | 按部门过滤 | 非管理员自动过滤结果 |
-| GET | /api/persons/search?name=张 | 模糊搜索 |  |
+| POST | `/auth/login` | 账号密码登录，返回 `token`、`role`、`expiresIn`、`accessiblePersons` | 所有 |
+| GET | `/me/profile` | 当前用户信息、角色、可管理范围 | 所有 |
+| GET | `/me/persons` | 当前用户可见的人员列表（含绑定摘要） | 所有 |
+| GET | `/me/devices` | 当前用户可见的设备及绑定状态 | 所有 |
+| GET | `/me/alerts?limit=20` | 个人视角最近告警 | 所有 |
 
-### 4.3 设备管理 (RadarDeviceController, DeviceStatusController)
-- 设备 CRUD：
-  - GET /api/radar/devices?page=0&size=10&modelType=TI6843_POSTURE（分页+筛选）。
-  - POST /api/radar/devices 新建，必填 deviceId, modelType; 默认状态 offline。
-  - POST /api/radar/devices/register 仅提供 ID+型号快速注册。
-  - PUT /api/radar/devices/{deviceId} 更新（自动保留创建时间/关键字段）。
-  - DELETE /api/radar/devices/{deviceId} 删除前会校验是否存在活跃绑定。
-  - 批量与辅助：PUT /api/radar/devices/batch/status, DELETE /api/radar/devices/batch, POST /api/radar/devices/handle-conflict, GET /api/radar/devices/generate-unique-id。
-- 状态/心跳：
-  - GET /api/device-status/overview 返回所有设备信息、实时在线状态、绑定人员、统计。
-  - GET /api/device-status/{deviceId} 查询单台设备的绑定与心跳详情。
-
-### 4.4 人员-设备绑定 (PersonDeviceMappingController)
-- 创建：POST /api/person-device-mappings，body 需要 personId, deviceId, mappingName。
-- 多设备绑定：POST /api/person-device-mappings/multi-bind 不会停用现有映射。
-- 查询：
-  - /api/person-device-mappings（活跃列表）
-  - /api/person-device-mappings/device/{deviceId}/person, /person/{personId}/device
-  - /api/person-device-mappings/person/{personId}/devices、/person/{personId}/mappings 及 model-type 过滤版。
-- 批量：PUT /api/person-device-mappings/batch-safe (DTO 校验版), PUT /api/person-device-mappings/batch, DELETE /api/person-device-mappings/batch。
-- 状态管理：PUT /api/person-device-mappings/{mappingId}/deactivate, /reactivate, GET /api/person-device-mappings/inactive, DELETE /api/person-device-mappings/cleanup?daysOld=30。
-- 更新：PUT /api/person-device-mappings/{mappingId} 单条更新；GET /api/person-device-mappings/{mappingId} 查询详情；DELETE /api/person-device-mappings/device/{deviceId}、/person/{personId} 批量解绑。
-
-### 4.5 呼吸/心跳数据
-#### TI6843 Vital
-- 设备管理：/api/ti6843/vital/devices 系列（CRUD、状态/位置筛选、绑定信息 GET /device/{deviceId}/person，绑定/解绑 /bind /unbind）。
-- 实时查询：
-  - GET /api/ti6843/vital/data/realtime/{deviceId} 按设备最新数据。
-  - GET /api/ti6843/vital/data/person/{personId}/realtime 按人员聚合。
-- 历史查询：
-  - GET /api/ti6843/vital/data/historical/device/{deviceId}/timerange?start=...&end=...
-  - GET /api/ti6843/vital/data/historical?deviceId=...&start=...&end=...（分页）
-  - GET /api/ti6843/vital/data/historical/summary?deviceId=... 返回统计（均值/峰值等）。
-- 通用查询：/data/device/{deviceId}, /data/device/{deviceId}/timerange, /person/{personId}/data, /person/{personId}/data/timerange。
-
-#### R60ABD1
-- 实时：GET /api/r60abd1/data/realtime/{deviceId}。
-- 历史：GET /api/r60abd1/data/historical/device/{deviceId}/timerange（含 DTO 分页接口 /historical）。
-- 通用：/api/r60abd1/data/data/device/{deviceId}, /data/device/{deviceId}/timerange, /data/timerange。
-
-### 4.6 人体位姿 (TI6843Posture)
-- 设备 CRUD：/api/ti6843/posture/devices 系列。
-- 实时查询：GET /api/ti6843/posture/data/realtime/{deviceId} 与 /person/{personId}/realtime。
-- 历史查询：
-  - /api/ti6843/posture/data/device/{deviceId}、/device/{deviceId}/timerange。
-  - /api/ti6843/posture/data/historical/device/{deviceId}/timerange 获取 TI6843HistoricalData。
-  - /api/ti6843/posture/data/person/{personId}/data、/person/{personId}/data/timerange。
-
-### 4.7 检测状态/设备心跳
-- GET /api/detection/status/{deviceId} 返回 DetectionStatus（设备信息、绑定人、是否有人、最新指标、lastUpdateTime）。
-- GET /api/detection/status/all、/model-type/{modelType}、/with-person 用于大屏过滤不同模型。
-- GET /api/device-status/overview（见 4.3）用于展示实时在线状态、心跳时间戳。
-
-### 4.8 告警
-#### 呼吸心跳异常 (VitalsAlertController)
-| 方法 | 路径 | 描述 |
+## 2. 管理端专属接口
+### 2.1 系统用户管理（`UserController`）
+| 方法 | 路径 | 功能 |
 | --- | --- | --- |
-| GET | /api/vitals-alerts | 全量列表（倒序）。 |
-| GET | /api/vitals-alerts/{id} | 告警详情。 |
-| GET | /api/vitals-alerts/device/{deviceId} | 按设备过滤。 |
-| GET | /api/vitals-alerts/person/{personId} | 按人员过滤。 |
-| GET | /api/vitals-alerts/timerange?start=&end= | 按时间范围过滤。 |
+| GET | `/users` | 列出系统用户 |
+| GET | `/users/{id}` | 查看用户详情 |
+| POST | `/users` | 创建用户（含角色、邮箱、姓名等） |
+| PUT | `/users/{id}` | 更新用户信息 |
+| DELETE | `/users/{id}` | 删除用户 |
+| POST | `/users/{id}/reset-password` | 重置密码 |
+| POST | `/users/{id}/lock` | 锁定账号 |
+| POST | `/users/{id}/unlock` | 解锁账号 |
 
-#### 跌倒/位姿异常 (FallAlertController)
-- 查询：GET /api/fall-alerts/active, /api/fall-alerts, /api/fall-alerts/{id}。
-- 过滤：GET /api/fall-alerts/device/{deviceId}/active, /person/{personId}/active, /timerange, /device/{deviceId}/timerange, /person/{personId}/timerange。
-- 流程：
-  - POST /api/fall-alerts/{id}/pending（body: { "handlerBy": "user", "notes": "..." }）。
-  - POST /api/fall-alerts/{id}/resolved、/false-alarm 更新状态和备注。
-- 统计：GET /api/fall-alerts/statistics 返回活跃数、今日告警等。
+### 2.2 审计日志（`AuditLogController`）
+| 方法 | 路径 | 功能 |
+| --- | --- | --- |
+| GET | `/admin/audit-logs?page=&size=&start=&end=&resourceType=&username=` | 分页查询审计记录，按时间/资源类型/用户名过滤 |
 
-### 4.9 绑定视角衍生接口
-- GET /api/ti6843/vital/device/{deviceId}/person、POST /bind、DELETE /unbind（TI6843 专属）。
-- GET /api/person-device-mappings/device/{deviceId}/person 通用查询。
-- GET /api/detection/status/with-person 快速查找“有人的设备”。
+### 2.3 资源管理（可被用户只读访问）
+> 以下接口管理员具备全量读写；普通用户仅能**只读**并被 `AuthScopeService` 过滤为授权对象。
 
-## 5. 实施建议
-1. 鉴权：登录后缓存 token 与 expiresIn，所有请求附带 Bearer Token；到期前刷新。
-2. 数据展示节流：实时图表建议调用 /realtime 接口，每 2~5 秒轮询，并缓存最近 20 条。
-3. 历史查询：时间范围参数为 ISO8601 字符串（如 2024-04-11T10:00:00），注意服务端默认本地时区。
-4. 错误处理：多数接口返回 {"success":false,"message":"..."} 或标准 HTTP 状态，前端需统一处理 400/403/500。
-5. 后续扩展：若需 WebSocket，可在 WebSocketConfig 基础上推送实时告警或数据流，现阶段 REST 足够。
+**人员管理（`PersonController`）**
+- GET `/persons`、`/persons/{personId}`、`/persons/department/{department}`、`/persons/search?name=`
+- POST `/persons`、PUT `/persons/{personId}`、DELETE `/persons/{personId}`
+
+**设备管理（`RadarDeviceController`）**
+- 设备 CRUD 与注册：
+  - GET `/radar/devices?page=&size=&modelType=&status=&location=`
+  - POST `/radar/devices`、POST `/radar/devices/register`
+  - PUT `/radar/devices/{deviceId}`、DELETE `/radar/devices/{deviceId}`
+- 批量/辅助：PUT `/radar/devices/batch/status`、DELETE `/radar/devices/batch`、POST `/radar/devices/handle-conflict`、GET `/radar/devices/generate-unique-id`
+- 状态查询：GET `/device-status/overview`、GET `/device-status/{deviceId}`
+
+**绑定管理（`PersonDeviceMappingController`）**
+- 创建/更新：POST `/person-device-mappings`、POST `/person-device-mappings/multi-bind`、PUT `/person-device-mappings/{mappingId}`
+- 查询：`/person-device-mappings`、`/inactive`、`/{mappingId}`、`/device/{deviceId}/person`、`/person/{personId}/device`、`/person/{personId}/devices`、`/person/{personId}/mappings`、`/device/{deviceId}/all`、`/person/{personId}/all`、`/device/{deviceId}/has-active`
+- 批量：PUT `/person-device-mappings/batch-safe`、PUT `/person-device-mappings/batch`、DELETE `/person-device-mappings/batch`
+- 状态与清理：PUT `/person-device-mappings/{mappingId}/deactivate`、`/reactivate`；GET `/person-device-mappings/inactive`；DELETE `/person-device-mappings/cleanup?daysOld=`；DELETE `/person-device-mappings/device/{deviceId}`、`/person/{personId}`
+
+### 2.4 告警管理
+**呼吸/心跳异常（`VitalsAlertController`）**
+- GET `/vitals-alerts`、`/{id}`、`/device/{deviceId}`、`/person/{personId}`、`/timerange?start=&end=`
+
+**跌倒/位姿异常（`FallAlertController`）**
+- 查询：GET `/fall-alerts/active`、`/fall-alerts`、`/fall-alerts/{id}`
+- 过滤：GET `/fall-alerts/device/{deviceId}/active`、`/person/{personId}/active`、`/timerange`、`/device/{deviceId}/timerange`、`/person/{personId}/timerange`
+- 处置：POST `/fall-alerts/{id}/pending`、`/resolved`、`/false-alarm`
+- 统计：GET `/fall-alerts/statistics`
+
+## 3. 用户端（及共享）数据接口
+### 3.1 检测与概览
+| 方法 | 路径 | 功能 | 角色 |
+| --- | --- | --- | --- |
+| GET | `/detection/status/{deviceId}` | 返回 DetectionStatus（设备信息、绑定人、是否有人、最新指标、lastUpdateTime） | 所有（按授权过滤） |
+| GET | `/detection/status/all`、`/model-type/{modelType}`、`/with-person` | 大屏/监控筛选 | 所有 |
+| GET | `/device-status/overview` | 全量设备心跳、在线状态、绑定、统计 | 管理员；用户视角可用 `/me/devices` |
+| GET | `/radar/systems` | 枚举已接入雷达系统及对应 API/WebSocket 端点 | 所有 |
+
+### 3.2 TI6843 Vital（生命体征）
+- **设备管理**：`/ti6843/vital/devices` 系列（同 RadarDeviceController 的 CRUD/筛选逻辑，含绑定信息 GET `/device/{deviceId}/person`、绑定/解绑 `/bind` `/unbind`）。
+- **实时数据**：GET `/ti6843/vital/data/realtime/{deviceId}`、GET `/ti6843/vital/data/person/{personId}/realtime`。
+- **历史数据**：
+  - GET `/ti6843/vital/data/historical/device/{deviceId}/timerange?start=&end=`
+  - GET `/ti6843/vital/data/historical?deviceId=&start=&end=`（分页）
+  - GET `/ti6843/vital/data/historical/summary?deviceId=`（均值/峰值/样本数）
+- **通用便捷查询**：GET `/ti6843/vital/data/device/{deviceId}`、`/device/{deviceId}/timerange`、`/person/{personId}/data`、`/person/{personId}/data/timerange`。
+
+### 3.3 TI6843 Posture（位姿）
+- **设备 CRUD**：`/ti6843/posture/devices` 系列。
+- **实时数据**：GET `/ti6843/posture/data/realtime/{deviceId}`、`/person/{personId}/realtime`。
+- **历史数据**：GET `/ti6843/posture/data/device/{deviceId}`、`/device/{deviceId}/timerange`、`/historical/device/{deviceId}/timerange`（返回 TI6843HistoricalData）、`/person/{personId}/data`、`/person/{personId}/data/timerange`。
+
+### 3.4 R60ABD1 生命体征
+- **实时**：GET `/r60abd1/data/realtime/{deviceId}`。
+- **历史**：GET `/r60abd1/data/historical/device/{deviceId}/timerange`、分页接口 `/r60abd1/data/historical`。
+- **通用**：GET `/r60abd1/data/data/device/{deviceId}`、`/data/device/{deviceId}/timerange`、`/data/timerange`。
+
+### 3.5 R77ABH1 生命体征
+- 数据接入、模型检测、WebSocket 端点参见 `/radar/systems` 及 `/api/r77abh1/**`（支持实时推送与归档），前端可按 `apiBasePath` 调用对应 REST/WS 接口。
+
+### 3.6 人员-设备绑定视角衍生接口
+- GET `/ti6843/vital/device/{deviceId}/person`、POST `/bind`、DELETE `/unbind`（TI6843 专属）。
+- GET `/person-device-mappings/device/{deviceId}/person`（通用查找设备对应人员）。
+- GET `/detection/status/with-person`（快速找“有人”的设备）。
+
+### 3.7 实时/历史呼吸心跳告警视图
+- 用户端可只读访问 2.4 中的查询接口；管理员可进一步执行告警状态流转。
+
+## 4. 前端集成提示
+1. 登录后缓存 token 与 `expiresIn`，所有请求带 Bearer Token；过期前刷新或跳转登录。
+2. 用户端页面仅展示授权范围的数据：人员/设备列表与告警查询均会被后端自动裁剪，无需额外过滤条件但可加搜索/筛选增强体验。
+3. 实时图表调用 `/realtime` 接口建议 2~5 秒轮询；历史查询使用 ISO8601 时间参数（如 `2024-04-11T10:00:00`）。
+4. 错误处理：接口常返回标准 HTTP 状态或 `{ "title": "...", "message": "..." }`，统一弹窗/Toast 提示。
+5. 若需 WebSocket 展示（如 R77ABH1、R60ABD1），可用 `/ws/*` STOMP 或原生 `/ws-native/r60abd1` 与 `apiBasePath` 组合订阅实时数据。

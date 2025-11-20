@@ -6,8 +6,8 @@ const route = useRoute()
 
 const links = [
   { name: 'Dashboard', path: '/', label: '概览' },
-  { name: 'Devices', path: '/devices', label: '设备' },
   { name: 'People', path: '/people', label: '人员' },
+  { name: 'Devices', path: '/devices', label: '设备' },
   { name: 'Mappings', path: '/mappings', label: '雷达绑定' },
   { name: 'Realtime', path: '/realtime', label: '实时监测' },
   { name: 'History', path: '/history', label: '历史数据' },
@@ -19,14 +19,8 @@ const activePath = computed(() => route.path)
 
 <template>
   <nav class="primary-nav">
-    <RouterLink
-      v-for="item in links"
-      :key="item.path"
-      :to="item.path"
-      class="nav-link"
-      :class="{ active: activePath.startsWith(item.path) && item.path !== '/' }"
-      exact-active-class="active"
-    >
+    <RouterLink v-for="item in links" :key="item.path" :to="item.path" class="nav-link"
+      :class="{ active: activePath.startsWith(item.path) && item.path !== '/' }" exact-active-class="active">
       <span>{{ item.label }}</span>
     </RouterLink>
   </nav>

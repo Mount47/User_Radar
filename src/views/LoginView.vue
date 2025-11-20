@@ -55,16 +55,17 @@ async function handleSubmit() {
   width: min(420px, 100%);
   padding: 2.5rem;
   border-radius: 26px;
-  background: rgba(8, 11, 18, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.12);
+  color: #0f172a;
 }
 
 .eyebrow {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(15, 23, 42, 0.4);
 }
 
 h2 {
@@ -73,7 +74,7 @@ h2 {
 }
 
 .subtitle {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(15, 23, 42, 0.55);
   margin-bottom: 1.5rem;
 }
 
@@ -85,7 +86,7 @@ form {
 
 label span {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(15, 23, 42, 0.65);
 }
 
 input {
@@ -93,19 +94,24 @@ input {
   margin-top: 0.4rem;
   padding: 0.95rem 1rem;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 252, 0.9);
+  color: #0f172a;
+}
+
+input::placeholder {
+  color: rgba(15, 23, 42, 0.45);
 }
 
 button[type='submit'] {
   border: none;
   border-radius: 20px;
   padding: 1rem;
-  background: linear-gradient(135deg, #8b5cf6, #22d3ee);
-  color: #05060a;
+  background: linear-gradient(135deg, #a5b4fc, #67e8f9);
+  color: #0f172a;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 15px 35px rgba(79, 70, 229, 0.25);
 }
 
 button[disabled] {
@@ -114,7 +120,7 @@ button[disabled] {
 }
 
 .error {
-  color: #f87171;
+  color: #dc2626;
   font-size: 0.85rem;
 }
 </style>
