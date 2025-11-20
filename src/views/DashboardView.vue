@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/store/user'
 import PersonSummaryCard from '@/components/PersonSummaryCard.vue'
 import AlertTimeline from '@/components/AlertTimeline.vue'
 import SparkLine from '@/components/SparkLine.vue'
 
 const store = useUserStore()
+const refreshing = ref(false)
 
 onMounted(() => {
   if (!store.persons.length) {
@@ -29,6 +30,12 @@ const activeHistory = computed(() => {
 })
 
 const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
+
+async function syncLatest() {
+  refreshing.value = true
+  await store.hydrateScope()
+  refreshing.value = false
+}
 </script>
 
 <template>
@@ -46,19 +53,24 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
           }}
         </p>
       </div>
-      <div class="hero-stats">
-        <div>
-          <span>人员</span>
-          <strong>{{ store.summaryStats.personCount }}</strong>
+      <div class="hero-actions">
+        <div class="hero-stats">
+          <div>
+            <span>人员</span>
+            <strong>{{ store.summaryStats.personCount }}</strong>
+          </div>
+          <div>
+            <span>设备</span>
+            <strong>{{ store.summaryStats.deviceCount }}</strong>
+          </div>
+          <div>
+            <span>角色</span>
+            <strong>{{ store.summaryStats.role }}</strong>
+          </div>
         </div>
-        <div>
-          <span>设备</span>
-          <strong>{{ store.summaryStats.deviceCount }}</strong>
-        </div>
-        <div>
-          <span>角色</span>
-          <strong>{{ store.summaryStats.role }}</strong>
-        </div>
+        <button type="button" class="ghost" :disabled="refreshing" @click="syncLatest">
+          {{ refreshing ? '同步中...' : '同步接口数据' }}
+        </button>
       </div>
     </div>
 
@@ -199,6 +211,7 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
   justify-content: space-between;
   gap: 2rem;
   flex-wrap: wrap;
+  align-items: center;
   box-shadow: 0 20px 55px rgba(15, 23, 42, 0.12);
 }
 
@@ -213,10 +226,21 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
   color: #6b7280;
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .hero-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .hero-stats span {
@@ -232,6 +256,7 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
+  align-items: stretch;
 }
 
 .status-card {
@@ -240,6 +265,9 @@ const detectionRows = computed(() => store.detectionSummaries.slice(0, 4))
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(15, 23, 42, 0.06);
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .status-card.warning {

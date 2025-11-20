@@ -7,6 +7,7 @@ import type {
   DetectionSummary,
   DeviceStatusOverview,
   HistoryBucket,
+  PersonDeviceMapping,
   RealtimeSnapshot,
   VitalDataPoint
 } from '@/types'
@@ -420,4 +421,37 @@ export async function mockUpdateAlertStatus(alertId: number, status: AlertStatus
     throw new Error('Alert not found')
   }
   return updated
+}
+
+export async function mockFetchPersonDirectory() {
+  await delay(120)
+  return persons
+}
+
+export async function mockFetchDeviceDirectory() {
+  await delay(120)
+  return devices
+}
+
+export async function mockFetchMappings(): Promise<PersonDeviceMapping[]> {
+  await delay(150)
+  const rows: PersonDeviceMapping[] = []
+  devices.forEach((device, deviceIndex) => {
+    const relatedPersons = device.persons?.length ? device.persons : [{ personId: 'UNBOUND', personName: '未绑定' }]
+    relatedPersons.forEach((person, idx) => {
+      rows.push({
+        mappingId: `${device.deviceId}-${person.personId}-${idx}`,
+        personId: person.personId,
+        personName: person.personName,
+        deviceId: device.deviceId,
+        deviceName: device.deviceName,
+        modelType: device.modelType,
+        status: device.status,
+        createdAt: new Date(now.getTime() - (deviceIndex + idx + 1) * 60 * 60 * 1000).toISOString(),
+        updatedAt: device.lastHeartbeat,
+        location: device.location
+      })
+    })
+  })
+  return rows
 }

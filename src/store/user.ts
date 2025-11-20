@@ -10,6 +10,7 @@ import type {
   DetectionSummary,
   DeviceStatusOverview,
   HistoryBucket,
+  PersonDeviceMapping,
   RealtimeSnapshot,
   VitalDataPoint
 } from '@/types'
@@ -20,8 +21,10 @@ import {
   fetchCaregiverProfile,
   fetchDetectionSummaries,
   fetchDeviceStatusOverview,
-  fetchHistoryBuckets,
+  fetchDeviceDirectory,
   fetchPersonHistory,
+  fetchPersonDeviceMappings,
+  fetchPersonDirectory,
   fetchRealtimeSnapshot,
   loginUser,
   updateAlertStatus
@@ -51,6 +54,9 @@ export const useUserStore = defineStore('user', () => {
   const profile = ref<CaregiverProfile | null>(null)
   const persons = ref<CaregiverPerson[]>([])
   const devices = ref<CaregiverDevice[]>([])
+  const personDirectory = ref<CaregiverPerson[]>([])
+  const deviceDirectory = ref<CaregiverDevice[]>([])
+  const mappings = ref<PersonDeviceMapping[]>([])
   const alerts = ref<CaregiverAlert[]>([])
   const histories = ref<Record<string, VitalDataPoint[]>>({})
   const realtimeSnapshots = ref<Record<string, RealtimeSnapshot>>({})
@@ -61,6 +67,56 @@ export const useUserStore = defineStore('user', () => {
   const historyRangeHours = ref(24)
   const alertFilters = ref<AlertFilterState>({ ...ALERT_FILTER_DEFAULT })
   const loading = ref(false)
+
+  function resolvePrimaryDevice(personId: string) {
+    const target = persons.value.find((item) => item.personId === personId)
+    if (!target) return null
+    const vitalDevice = target.devices.find((item) =>
+      (item.modelType || '').toLowerCase().includes('vital')
+    )
+    return vitalDevice?.deviceId || target.devices[0]?.deviceId || null
+  }
+
+  function buildBuckets(personId: string) {
+    const source = histories.value[personId] || []
+    if (!source.length) {
+      bucketedHistory.value = { ...bucketedHistory.value, [personId]: [] }
+      return
+    }
+    const grouped: Record<string, HistoryBucket> = {}
+    const cutoff = Date.now() - historyRangeHours.value * 60 * 60 * 1000
+    source
+      .filter((item) => new Date(item.timestamp).getTime() >= cutoff)
+      .forEach((item) => {
+        const hour = new Date(item.timestamp)
+        hour.setMinutes(0, 0, 0)
+        const key = hour.toISOString()
+        if (!grouped[key]) {
+          grouped[key] = {
+            timestamp: key,
+            heartRateAvg: 0,
+            breathRateAvg: 0,
+            motionAvg: 0,
+            eventCount: 0
+          }
+        }
+        grouped[key].heartRateAvg += Number(item.heartRate ?? 0)
+        grouped[key].breathRateAvg += Number(item.breathRate ?? 0)
+        grouped[key].motionAvg += Number(item.motion ?? 0)
+        grouped[key].eventCount += 1
+      })
+
+    const buckets = Object.values(grouped)
+      .map((bucket) => ({
+        ...bucket,
+        heartRateAvg: bucket.eventCount ? bucket.heartRateAvg / bucket.eventCount : 0,
+        breathRateAvg: bucket.eventCount ? bucket.breathRateAvg / bucket.eventCount : 0,
+        motionAvg: bucket.eventCount ? bucket.motionAvg / bucket.eventCount : 0
+      }))
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
+    bucketedHistory.value = { ...bucketedHistory.value, [personId]: buckets }
+  }
 
   const isAuthenticated = computed(() => Boolean(token.value))
   const activePerson = computed(() => {
@@ -100,6 +156,57 @@ export const useUserStore = defineStore('user', () => {
     critical: alerts.value.filter((item) => item.severity === 'CRITICAL' || item.severity === 'HIGH').length
   }))
 
+  function normalizeDevices(list: CaregiverDevice[]) {
+    return list.map((item) => ({
+      ...item,
+      persons: item.persons || []
+    }))
+  }
+
+  function buildMappingFallback(deviceList = deviceDirectory.value, personList = personDirectory.value) {
+    if (!deviceList.length && devices.value.length) {
+      deviceList = devices.value
+    }
+    if (!personList.length && persons.value.length) {
+      personList = persons.value
+    }
+    const map: PersonDeviceMapping[] = []
+    deviceList.forEach((device, deviceIndex) => {
+      const links = device.persons?.length ? device.persons : [{ personId: 'UNBOUND', personName: '未绑定' }]
+      links.forEach((person, personIdx) => {
+        map.push({
+          mappingId: `${device.deviceId}-${person.personId}-${personIdx}`,
+          personId: person.personId,
+          personName: person.personName,
+          deviceId: device.deviceId,
+          deviceName: device.deviceName,
+          modelType: device.modelType,
+          status: device.status,
+          updatedAt: device.lastHeartbeat,
+          location: device.location,
+          createdAt: new Date(Date.now() - (deviceIndex + personIdx + 1) * 3600000).toISOString()
+        })
+      })
+    })
+    if (!map.length && personList.length) {
+      personList.forEach((person, idx) => {
+        map.push({
+          mappingId: `person-${person.personId}-${idx}`,
+          personId: person.personId,
+          personName: person.personName,
+          deviceId: person.devices[0]?.deviceId || 'UNBOUND',
+          deviceName: person.devices[0]?.deviceName,
+          modelType: person.devices[0]?.modelType,
+          status: 'OFFLINE',
+          location: '未知',
+          createdAt: person.latestOverview?.collectedAt,
+          updatedAt: person.latestOverview?.collectedAt
+        })
+      })
+    }
+    return map
+  }
+
   async function login(payload: Credentials) {
     loading.value = true
     try {
@@ -120,6 +227,9 @@ export const useUserStore = defineStore('user', () => {
     profile.value = null
     persons.value = []
     devices.value = []
+    personDirectory.value = []
+    deviceDirectory.value = []
+    mappings.value = []
     alerts.value = []
     histories.value = {}
     realtimeSnapshots.value = {}
@@ -134,17 +244,33 @@ export const useUserStore = defineStore('user', () => {
     if (!token.value) return
     loading.value = true
     try {
-      const [profileData, personData, deviceData, alertData, overviewData, detectionData] = await Promise.all([
+      const [
+        profileData,
+        personData,
+        deviceData,
+        alertData,
+        overviewData,
+        detectionData,
+        directoryPersons,
+        directoryDevices,
+        mappingData
+      ] = await Promise.all([
         fetchCaregiverProfile(),
         fetchCaregiverPersons(),
         fetchCaregiverDevices(),
         fetchCaregiverAlerts(50),
         fetchDeviceStatusOverview(),
-        fetchDetectionSummaries()
+        fetchDetectionSummaries(),
+        fetchPersonDirectory(),
+        fetchDeviceDirectory({ size: 100 }),
+        fetchPersonDeviceMappings()
       ])
       profile.value = profileData
       persons.value = personData
-      devices.value = deviceData
+      devices.value = normalizeDevices(deviceData)
+      personDirectory.value = directoryPersons?.length ? directoryPersons : personData
+      deviceDirectory.value = directoryDevices?.length ? normalizeDevices(directoryDevices) : devices.value
+      mappings.value = mappingData?.length ? mappingData : buildMappingFallback()
       alerts.value = alertData
       deviceOverview.value = overviewData
       detectionSummaries.value = detectionData
@@ -159,7 +285,6 @@ export const useUserStore = defineStore('user', () => {
         await Promise.all([
           fetchHistoryForSelection(defaultPersonId),
           fetchRealtimeForSelection(defaultPersonId),
-          refreshHistoryBuckets(defaultPersonId),
           refreshAlerts(defaultPersonId)
         ])
       } else {
@@ -172,7 +297,27 @@ export const useUserStore = defineStore('user', () => {
 
   async function refreshDevices() {
     devices.value = await fetchCaregiverDevices()
+    deviceDirectory.value = deviceDirectory.value.length ? deviceDirectory.value : devices.value
     await refreshDeviceOverview()
+  }
+
+  async function refreshPersonDirectory() {
+    personDirectory.value = await fetchPersonDirectory()
+  }
+
+  async function refreshDeviceDirectory(params?: {
+    page?: number
+    size?: number
+    modelType?: string
+    status?: string
+    location?: string
+  }) {
+    deviceDirectory.value = normalizeDevices(await fetchDeviceDirectory(params))
+  }
+
+  async function refreshMappings() {
+    const data = await fetchPersonDeviceMappings()
+    mappings.value = data.length ? data : buildMappingFallback()
   }
 
   async function refreshAlerts(personId?: string) {
@@ -189,10 +334,12 @@ export const useUserStore = defineStore('user', () => {
   async function fetchHistoryForSelection(personId?: string) {
     const id = personId || selectedPersonId.value
     if (!id) return
+    const deviceId = resolvePrimaryDevice(id) || undefined
     histories.value = {
       ...histories.value,
-      [id]: await fetchPersonHistory(id)
+      [id]: await fetchPersonHistory(id, historyRangeHours.value, deviceId)
     }
+    buildBuckets(id)
   }
 
   async function fetchRealtimeForSelection(personId?: string) {
@@ -207,10 +354,11 @@ export const useUserStore = defineStore('user', () => {
   async function refreshHistoryBuckets(personId?: string) {
     const id = personId || selectedPersonId.value
     if (!id) return
-    bucketedHistory.value = {
-      ...bucketedHistory.value,
-      [id]: await fetchHistoryBuckets(id)
+    if (!histories.value[id]) {
+      await fetchHistoryForSelection(id)
+      return
     }
+    buildBuckets(id)
   }
 
   async function refreshDeviceOverview() {
@@ -242,7 +390,7 @@ export const useUserStore = defineStore('user', () => {
 
   function setHistoryRange(hours: number) {
     historyRangeHours.value = hours
-    refreshHistoryBuckets()
+    fetchHistoryForSelection()
   }
 
   if (token.value) {
@@ -255,6 +403,9 @@ export const useUserStore = defineStore('user', () => {
     profile,
     persons,
     devices,
+    personDirectory,
+    deviceDirectory,
+    mappings,
     alerts,
     histories,
     realtimeSnapshots,
@@ -275,9 +426,12 @@ export const useUserStore = defineStore('user', () => {
     logout,
     hydrateScope,
     refreshDevices,
+    refreshPersonDirectory,
+    refreshDeviceDirectory,
     refreshAlerts,
     refreshDeviceOverview,
     refreshDetections,
+    refreshMappings,
     fetchHistoryForSelection,
     fetchRealtimeForSelection,
     refreshHistoryBuckets,
