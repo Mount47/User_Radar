@@ -89,7 +89,7 @@ const changeLabel = computed(() => {
       <div>
         <p class="eyebrow">毫米波雷达</p>
         <h2>设备概览</h2>
-        <p class="muted">快速查看在线率、年度趋势和设备状态。</p>
+        <p class="muted">快速查看在线率、年度趋势和设备状态，一目了然掌握站点健康度。</p>
       </div>
       <div class="head-actions">
         <span class="chip">系统平稳</span>
@@ -126,7 +126,7 @@ const changeLabel = computed(() => {
 
       <div class="card compare">
         <header>
-          <p class="label">设备年度对比</p>
+          <p class="label">年度检测对比（呼吸 · 姿态）</p>
           <p class="muted">每个月的数据展现当前监测设备的稳定性和检测分析</p>
         </header>
         <div class="chart">
