@@ -495,7 +495,7 @@ function handleReset() {
 .chart-body path {
   fill: none;
   stroke: #a855f7;
-  stroke-width: 2.5;
+  stroke-width: 0.5;
 }
 
 .chart-meta {

@@ -171,7 +171,8 @@ export async function fetchRealtimeSnapshot(personId: string): Promise<RealtimeS
     return data ?? ({} as RealtimeSnapshot)
   } catch (error) {
     console.warn('获取实时数据失败，使用模拟数据回退', error)
-    return mockFetchRealtimeSnapshot(personId)
+    // return mockFetchRealtimeSnapshot(personId)
+        return {} as RealtimeSnapshot
   }
 }
 
@@ -185,7 +186,8 @@ export async function fetchHistoryBuckets(
     return buildBucketsFromPoints(points, hours)
   } catch (error) {
     console.warn('获取历史统计失败，使用模拟数据回退', error)
-    return mockFetchHistoryBuckets(personId)
+    // return mockFetchHistoryBuckets(personId)
+    return []
   }
 }
 

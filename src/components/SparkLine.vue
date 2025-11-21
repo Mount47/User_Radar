@@ -22,7 +22,7 @@ const points = computed(() => {
 
 <template>
   <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-    <polyline :points="points" :stroke="color || '#818cf8'" fill="none" stroke-width="3" stroke-linecap="round" />
+    <polyline :points="points" :stroke="color || '#818cf8'" fill="none" stroke-width="0.5" stroke-linecap="round" />
   </svg>
 </template>
 

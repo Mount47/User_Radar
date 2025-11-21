@@ -98,7 +98,7 @@ const changeLabel = computed(() => {
       </div>
       <div class="head-actions">
         <span class="chip">系统平稳</span>
-        <span class="chip ghost">自动刷新</span>
+        <!-- <span class="chip ghost">自动刷新</span> -->
       </div>
     </header>
 

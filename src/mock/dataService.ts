@@ -25,10 +25,10 @@ const caregiverProfile: CaregiverProfile = {
 const persons: CaregiverPerson[] = [
   {
     personId: 'P1001',
-    personName: '王阿姨',
+    personName: '小李',
     age: 82,
     gender: 'F',
-    department: '3F · 颐养区',
+    department: '3F · 房间2',
     tags: ['夜间重点', '高血压'],
     devices: [
       { deviceId: 'R60-A1', deviceName: '卧室雷达', modelType: 'R60ABD1' },
@@ -45,10 +45,10 @@ const persons: CaregiverPerson[] = [
   },
   {
     personId: 'P1002',
-    personName: '王宁',
+    personName: '小王',
     age: 79,
     gender: 'M',
-    department: '5F · 康复区',
+    department: '5F · 房间1',
     tags: ['术后康复'],
     devices: [
       { deviceId: 'R60-A5', deviceName: '床位雷达', modelType: 'R60ABD1' },
@@ -65,10 +65,10 @@ const persons: CaregiverPerson[] = [
   },
   {
     personId: 'P1003',
-    personName: '宋杞',
+    personName: '小明',
     age: 88,
     gender: 'M',
-    department: '2F · 失智专区',
+    department: '2F · 房间3',
     tags: ['离床看护', '跌倒风险'],
     devices: [
       { deviceId: 'TI-V7', deviceName: '生命体征', modelType: 'TI6843 Vital' },
@@ -114,7 +114,7 @@ const devices: CaregiverDevice[] = [
     location: '301 床头',
     signalQuality: 88,
     lastHeartbeat: now.toISOString(),
-    persons: [{ personId: 'P1001', personName: '王阿姨' }]
+    persons: [{ personId: 'P1001', personName: '小李' }]
   },
   {
     deviceId: 'TI-V4',
@@ -124,7 +124,7 @@ const devices: CaregiverDevice[] = [
     location: '503 床头',
     signalQuality: 80,
     lastHeartbeat: new Date(now.getTime() - 1 * 60 * 1000).toISOString(),
-    persons: [{ personId: 'P1002', personName: '王宁' }]
+    persons: [{ personId: 'P1002', personName: '小王' }]
   },
   {
     deviceId: 'TI-P1',
@@ -134,7 +134,7 @@ const devices: CaregiverDevice[] = [
     location: '2F 公共走廊',
     signalQuality: 76,
     lastHeartbeat: new Date(now.getTime() - 25 * 60 * 1000).toISOString(),
-    persons: [{ personId: 'P1003', personName: '宋杞' }]
+    persons: [{ personId: 'P1003', personName: '小明' }]
   }
 ]
 
@@ -142,7 +142,7 @@ let alerts: CaregiverAlert[] = [
   {
     alertId: 987,
     personId: 'P1001',
-    personName: '王阿姨',
+    personName: '小李',
     deviceId: 'TI-V1',
     alertType: 'HEART_TACHY',
     severity: 'HIGH',
@@ -155,7 +155,7 @@ let alerts: CaregiverAlert[] = [
   {
     alertId: 988,
     personId: 'P1002',
-    personName: '王宁',
+    personName: '小王',
     deviceId: 'R60-A5',
     alertType: 'PRESENCE_LOSS',
     severity: 'CRITICAL',
@@ -168,7 +168,7 @@ let alerts: CaregiverAlert[] = [
   {
     alertId: 989,
     personId: 'P1003',
-    personName: '宋杞',
+    personName: '小明',
     deviceId: 'TI-P1',
     alertType: 'FALL_RISK',
     severity: 'MEDIUM',

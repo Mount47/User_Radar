@@ -188,8 +188,8 @@ function formatDate(value?: string) {
                     <stop offset="100%" stop-color="#38bdf8"></stop>
                   </linearGradient>
                 </defs>
-                <path :d="chartPaths.heart" stroke="url(#heartStroke)" fill="none" stroke-width="2.5" />
-                <path :d="chartPaths.breath" stroke="url(#breathStroke)" fill="none" stroke-width="2.5" />
+                <path :d="chartPaths.heart" stroke="url(#heartStroke)" fill="none" stroke-width="0.5" />
+                <path :d="chartPaths.breath" stroke="url(#breathStroke)" fill="none" stroke-width="0.5" />
               </svg>
             </div>
             <p v-else class="empty">等待设备推送实时波形...</p>
