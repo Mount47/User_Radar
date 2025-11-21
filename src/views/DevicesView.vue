@@ -74,9 +74,7 @@ const comparisonSeries = computed(() => {
 const detailDevices = computed(() => {
   return managedDevices.value.slice(0, 6).map((device) => ({
     ...device,
-    heartbeat: device.lastHeartbeat
-      ? new Date(device.lastHeartbeat).toLocaleString()
-      : '暂无心跳',
+    heartbeat: device.lastHeartbeat ? new Date(device.lastHeartbeat).toLocaleString() : '暂无心跳',
     personLabel: device.persons?.[0]?.personName || '未绑定'
   }))
 })
@@ -84,7 +82,7 @@ const detailDevices = computed(() => {
 const changeLabel = computed(() => {
   const base = overview.value?.online ?? managedDevices.value.length
   const delta = base ? Math.min(25, Math.max(6, Math.round(base * 0.2))) : 0
-  return `+${delta} 台，相比上个月` 
+  return `+${delta} 台，相比上个月`
 })
 </script>
 
@@ -104,18 +102,22 @@ const changeLabel = computed(() => {
 
     <div class="grid">
       <div class="card highlight">
-        <div>
-          <p class="label">设备数量统计</p>
-          <h3>{{ overview?.totalDevices ?? store.devices.length }} 台</h3>
-          <p class="accent">{{ changeLabel }}</p>
+        <div class="summary-head">
+          <div class="summary-bubble">雷</div>
+          <div>
+            <p class="label">设备数量统计</p>
+            <h3>{{ overview?.totalDevices ?? store.devices.length }} 台</h3>
+            <p class="accent">↗ {{ changeLabel }}</p>
+          </div>
         </div>
+        <p class="muted tiny">当前站点设备的总量与环比趋势，快速掌握新增与退网情况。</p>
         <div class="pill">设备总览</div>
       </div>
 
       <div class="card timeline">
         <header>
           <p class="label">设备最近更新时间</p>
-          <span class="sub">Top</span>
+          <span class="sub">按最新排序</span>
         </header>
         <ul>
           <li v-for="device in latestDevices" :key="device.deviceId">
@@ -155,16 +157,23 @@ const changeLabel = computed(() => {
           <p class="label">设备在线率</p>
           <span class="delta">{{ onlineRate }}%</span>
         </header>
-        <div class="bar-track">
-          <div class="bar-fill" :style="{ width: `${onlineRate}%` }"></div>
+        <div class="rate-body">
+          <div class="ring" :style="{ background: `conic-gradient(#22c55e ${onlineRate}%, #e2e8f0 ${onlineRate}% 100%)` }">
+            <div class="ring-inner">
+              <strong>{{ onlineRate }}%</strong>
+              <span>在线率</span>
+            </div>
+          </div>
+          <div class="rate-meta">
+            <p class="muted">在线率 = 在线设备 / 可用设备 (排除维护)</p>
+            <ul class="legend">
+              <li v-for="item in statusLegend" :key="item.label">
+                <span class="swatch" :style="{ background: item.tone }"></span>
+                {{ item.label }}：{{ item.value }} 台
+              </li>
+            </ul>
+          </div>
         </div>
-        <p class="muted">在线率 = 在线设备 / 可用设备 (排除维护)</p>
-        <ul class="legend">
-          <li v-for="item in statusLegend" :key="item.label">
-            <span class="swatch" :style="{ background: item.tone }"></span>
-            {{ item.label }}：{{ item.value }} 台
-          </li>
-        </ul>
       </div>
 
       <div class="card details">
@@ -172,22 +181,27 @@ const changeLabel = computed(() => {
           <p class="label">设备详情</p>
           <p class="muted">绑定关系 / 心跳 / 场景位置信息</p>
         </header>
-        <div class="detail-grid">
-          <article v-for="item in detailDevices" :key="item.deviceId" class="detail-card">
-            <div class="detail-top">
-              <div>
-                <p class="name">{{ item.deviceName }}</p>
-                <p class="muted">{{ item.location || '未知位置' }}</p>
-              </div>
-              <span class="chip ghost">{{ item.modelType }}</span>
+        <div class="table">
+          <div class="table-head">
+            <span>设备名称</span>
+            <span>设备位置</span>
+            <span>运行数据</span>
+            <span>绑定对象</span>
+            <span>运行状态</span>
+          </div>
+          <div v-for="item in detailDevices" :key="item.deviceId" class="table-row">
+            <div class="cell name">
+              <p class="title">{{ item.deviceName }}</p>
+              <p class="muted">{{ item.modelType }}</p>
             </div>
-            <p class="muted">最新心跳：{{ item.heartbeat }}</p>
-            <p class="muted">绑定对象：{{ item.personLabel }}</p>
-            <div class="status-row">
+            <div class="cell">{{ item.location || '未知位置' }}</div>
+            <div class="cell">{{ item.heartbeat }}</div>
+            <div class="cell">{{ item.personLabel }}</div>
+            <div class="cell status">
               <span :class="['status-dot', item.status.toLowerCase()]"></span>
               <span class="status-text">{{ item.status === 'ONLINE' ? '在线' : item.status === 'MAINTENANCE' ? '维护' : '离线' }}</span>
             </div>
-          </article>
+          </div>
         </div>
       </div>
     </div>
@@ -246,10 +260,14 @@ const changeLabel = computed(() => {
 
 .grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 360px 1fr;
   grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    'summary compare'
+    'updates compare'
+    'rate details';
   gap: 1.2rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .card {
@@ -272,12 +290,31 @@ const changeLabel = computed(() => {
 }
 
 .highlight {
-  grid-row: span 2;
+  grid-area: summary;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 1rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(226, 240, 255, 0.95));
+}
+
+.summary-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.summary-bubble {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
 }
 
 .highlight h3 {
@@ -290,6 +327,10 @@ const changeLabel = computed(() => {
   font-weight: 700;
 }
 
+.tiny {
+  font-size: 0.9rem;
+}
+
 .pill {
   align-self: flex-start;
   padding: 0.4rem 0.8rem;
@@ -297,6 +338,10 @@ const changeLabel = computed(() => {
   background: rgba(16, 185, 129, 0.15);
   color: #047857;
   font-weight: 600;
+}
+
+.timeline {
+  grid-area: updates;
 }
 
 .timeline ul {
@@ -348,7 +393,7 @@ const changeLabel = computed(() => {
 }
 
 .compare {
-  grid-column: 2 / -1;
+  grid-area: compare;
 }
 
 .chart {
@@ -383,6 +428,7 @@ const changeLabel = computed(() => {
   width: 12px;
   border-radius: 8px 8px 4px 4px;
   transition: height 0.3s ease;
+  box-shadow: 0 8px 14px rgba(99, 102, 241, 0.15);
 }
 
 .bar.breath {
@@ -424,23 +470,7 @@ const changeLabel = computed(() => {
 }
 
 .rate {
-  grid-row: span 2;
-}
-
-.rate .bar-track {
-  width: 100%;
-  height: 14px;
-  background: rgba(15, 23, 42, 0.06);
-  border-radius: 999px;
-  overflow: hidden;
-  margin: 0.6rem 0 0.4rem;
-}
-
-.bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #22c55e, #a855f7);
-  transition: width 0.3s ease;
+  grid-area: rate;
 }
 
 .rate .delta {
@@ -448,38 +478,90 @@ const changeLabel = computed(() => {
   color: #0f172a;
 }
 
-.details {
-  grid-column: 1 / -1;
-}
-
-.detail-grid {
+.rate-body {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.9rem;
-  margin-top: 0.8rem;
-}
-
-.detail-card {
-  border: 1px solid rgba(15, 23, 42, 0.05);
-  border-radius: 16px;
-  padding: 0.9rem;
-  background: rgba(249, 250, 251, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.detail-top {
-  display: flex;
-  justify-content: space-between;
+  grid-template-columns: 160px 1fr;
   align-items: center;
+  gap: 1rem;
+}
+
+.ring {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#22c55e 60%, #e2e8f0 60% 100%);
+  box-shadow: inset 0 0 0 12px rgba(255, 255, 255, 0.7);
+}
+
+.ring-inner {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  gap: 0.2rem;
+}
+
+.ring-inner strong {
+  font-size: 1.3rem;
+}
+
+.rate-meta {
+  display: flex;
+  flex-direction: column;
   gap: 0.6rem;
-  margin-bottom: 0.6rem;
 }
 
-.status-row {
-  display: flex;
+.details {
+  grid-area: details;
+}
+
+.table {
+  margin-top: 0.9rem;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.table-head,
+.table-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr 1.4fr 1fr 1fr;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 0.4rem;
+}
+
+.table-head {
+  padding: 0.75rem 1rem;
+  background: #f1f5f9;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.table-row {
+  padding: 0.8rem 1rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.04);
+  background: #fff;
+}
+
+.table-row:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.cell.name .title {
+  font-weight: 700;
+}
+
+.cell.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .status-dot {
@@ -509,11 +591,67 @@ const changeLabel = computed(() => {
   .grid {
     grid-template-columns: 1fr;
     grid-template-rows: none;
+    grid-template-areas: none;
   }
 
   .highlight,
-  .rate {
+  .rate,
+  .compare,
+  .timeline,
+  .details {
     grid-row: auto;
+    grid-column: auto;
+  }
+
+  .rate-body {
+    grid-template-columns: 1fr;
+  }
+
+  .table-head,
+  .table-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'name status'
+      'location location'
+      'running running'
+      'binding binding';
+  }
+
+  .table-head span:nth-child(1) {
+    grid-area: name;
+  }
+  .table-head span:nth-child(2) {
+    display: none;
+  }
+  .table-head span:nth-child(3) {
+    display: none;
+  }
+  .table-head span:nth-child(4) {
+    display: none;
+  }
+  .table-head span:nth-child(5) {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .table-row .cell:nth-child(1) {
+    grid-area: name;
+  }
+  .table-row .cell:nth-child(2) {
+    grid-area: location;
+    color: #475569;
+  }
+  .table-row .cell:nth-child(3) {
+    grid-area: running;
+    color: #475569;
+  }
+  .table-row .cell:nth-child(4) {
+    grid-area: binding;
+    color: #475569;
+  }
+  .table-row .cell:nth-child(5) {
+    grid-area: status;
+    justify-self: end;
   }
 }
 </style>
