@@ -112,7 +112,7 @@ const activeDevice = computed(() => {
   return store.devices.find((device) => device.persons?.some((item) => item.personId === person.personId)) || null
 })
 
- const postureDetection = computed(() => {
+const postureDetection = computed(() => {
   const personId = store.activePerson?.personId
   if (!personId) return null
   return store.detectionSummaries.find(
@@ -139,7 +139,7 @@ function formatDate(value?: string) {
       <div>
         <p class="eyebrow">实时监测</p>
         <h1>实时数据监控中心</h1>
-        <p class="muted">切换不同模式可查看呼吸心跳或人体位姿的即时状态。</p>
+        <p class="muted">切换模式查看呼吸心跳波形或人体位姿云图，所有提示均为中文。</p>
       </div>
       <div class="controls">
         <label class="select-field">
@@ -152,7 +152,7 @@ function formatDate(value?: string) {
         </label>
         <div class="tab-bar">
           <button type="button" :class="{ active: activeTab === 'vitals' }" @click="activeTab = 'vitals'">
-            呼吸心跳
+            实时体征
           </button>
           <button type="button" :class="{ active: activeTab === 'posture' }" @click="activeTab = 'posture'">
             人体位姿
@@ -163,131 +163,104 @@ function formatDate(value?: string) {
 
     <div v-if="activeTab === 'vitals'" class="tab-panel">
       <div class="vitals-grid">
-        <div class="chart-column">
-          <article class="card chart-card">
-            <div class="chart-head">
+        <article class="card chart-card waveform-card">
+          <div class="chart-head">
+            <div>
+              <p class="eyebrow">实时波形趋势</p>
+              <h2>呼吸 · 心跳数据</h2>
+              <p class="muted">下图为实时数据波形，可快速识别呼吸与心跳异常。</p>
+            </div>
+            <div class="chart-legend">
+              <span><i class="dot heart"></i> 心跳 Heartbeat</span>
+              <span><i class="dot breath"></i> 呼吸 Respiratory</span>
+            </div>
+          </div>
+          <div class="chart-body" v-if="historySlice.length">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="heartStroke" x1="0%" x2="100%">
+                  <stop offset="0%" stop-color="#f43f5e"></stop>
+                  <stop offset="100%" stop-color="#fb7185"></stop>
+                </linearGradient>
+                <linearGradient id="breathStroke" x1="0%" x2="100%">
+                  <stop offset="0%" stop-color="#a855f7"></stop>
+                  <stop offset="100%" stop-color="#38bdf8"></stop>
+                </linearGradient>
+              </defs>
+              <path :d="chartPaths.heart" stroke="url(#heartStroke)" fill="none" stroke-width="0.6" />
+              <path :d="chartPaths.breath" stroke="url(#breathStroke)" fill="none" stroke-width="0.6" />
+            </svg>
+          </div>
+          <p v-else class="empty">等待设备推送实时波形...</p>
+          <div class="chart-footer">
+            <span>下图展示了数据的波形</span>
+            <span>可根据实时数据判断患者呼吸心跳状态</span>
+          </div>
+        </article>
+
+        <aside class="side-panel">
+          <article class="card info-card user-card">
+            <header>
+              <span>人员信息</span>
+              <strong>{{ store.activePerson.personName }}</strong>
+            </header>
+            <dl>
               <div>
-                <p class="eyebrow">实时波形趋势</p>
-                <h2>呼吸 · 心跳波形</h2>
-                <p class="muted">下图为实时波形变化，可对体征数据进行识别分析</p>
+                <dt>人员 ID</dt>
+                <dd>{{ store.activePerson.personId }}</dd>
               </div>
-              <div class="chart-legend">
-                <span><i class="dot heart"></i> 心跳</span>
-                <span><i class="dot breath"></i> 呼吸</span>
+              <div>
+                <dt>性别</dt>
+                <dd>{{ store.activePerson.gender === 'M' ? '男' : '女' }}</dd>
               </div>
-            </div>
-            <div class="chart-body" v-if="historySlice.length">
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="heartStroke" x1="0%" x2="100%">
-                    <stop offset="0%" stop-color="#f43f5e"></stop>
-                    <stop offset="100%" stop-color="#fb7185"></stop>
-                  </linearGradient>
-                  <linearGradient id="breathStroke" x1="0%" x2="100%">
-                    <stop offset="0%" stop-color="#a855f7"></stop>
-                    <stop offset="100%" stop-color="#38bdf8"></stop>
-                  </linearGradient>
-                </defs>
-                <path :d="chartPaths.heart" stroke="url(#heartStroke)" fill="none" stroke-width="0.5" />
-                <path :d="chartPaths.breath" stroke="url(#breathStroke)" fill="none" stroke-width="0.5" />
-              </svg>
-            </div>
-            <p v-else class="empty">等待设备推送实时波形...</p>
+              <div>
+                <dt>所属科室</dt>
+                <dd>{{ store.activePerson.department }}</dd>
+              </div>
+              <div>
+                <dt>标签</dt>
+                <dd>{{ store.activePerson.tags?.[0] || '未设置' }}</dd>
+              </div>
+              <div>
+                <dt>最近采集</dt>
+                <dd>{{ formatDate(store.activePerson.latestOverview?.collectedAt) }}</dd>
+              </div>
+            </dl>
           </article>
 
-          <div class="status-grid inline">
-            <article class="card mini-card">
-              <p>监测状态</p>
-              <strong>{{ monitoringStatus.label }}</strong>
-              <span>{{ monitoringStatus.detail }}</span>
-            </article>
-            <article class="card mini-card">
-              <p>异常数量</p>
-              <strong>{{ exceptionSummary.total }}</strong>
-              <span>{{ exceptionSummary.critical }} 条高优先级待处理</span>
-            </article>
-            <article class="card mini-card">
-              <p>呼吸次数</p>
-              <strong>{{ store.activeRealtime?.breathRate ?? '--' }} 次/分</strong>
-              <span :class="{ up: trendDeltas.breath >= 0, down: trendDeltas.breath < 0 }">
-                {{ trendDeltas.breath >= 0 ? '+' : '' }}{{ trendDeltas.breath }} vs 上一次
-              </span>
-            </article>
-            <article class="card mini-card">
-              <p>心率</p>
-              <strong>{{ store.activeRealtime?.heartRate ?? '--' }} 次/分</strong>
-              <span :class="{ up: trendDeltas.heart >= 0, down: trendDeltas.heart < 0 }">
-                {{ trendDeltas.heart >= 0 ? '+' : '' }}{{ trendDeltas.heart }} vs 上一次
-              </span>
-            </article>
-          </div>
-        </div>
-
-        <div class="info-blocks">
-          <div class="info-pair">
-            <article class="card info-card">
-              <header>
-                <span>人员信息</span>
-                <strong>{{ store.activePerson.personName }}</strong>
-              </header>
-              <dl>
-                <div>
-                  <dt>人员 ID</dt>
-                  <dd>{{ store.activePerson.personId }}</dd>
-                </div>
-                <div>
-                  <dt>性别</dt>
-                  <dd>{{ store.activePerson.gender === 'M' ? '男' : '女' }}</dd>
-                </div>
-                <div>
-                  <dt>所属科室</dt>
-                  <dd>{{ store.activePerson.department }}</dd>
-                </div>
-                <div>
-                  <dt>标签</dt>
-                  <dd>{{ store.activePerson.tags?.[0] || '未设置' }}</dd>
-                </div>
-                <div>
-                  <dt>最近采集</dt>
-                  <dd>{{ formatDate(store.activePerson.latestOverview?.collectedAt) }}</dd>
-                </div>
-              </dl>
-            </article>
-
-            <article class="card info-card" v-if="activeDevice">
-              <header>
-                <span>设备信息</span>
-                <strong>{{ activeDevice.deviceName }}</strong>
-              </header>
-              <dl>
-                <div>
-                  <dt>设备 ID</dt>
-                  <dd>{{ activeDevice.deviceId }}</dd>
-                </div>
-                <div>
-                  <dt>类型</dt>
-                  <dd>{{ activeDevice.modelType }}</dd>
-                </div>
-                <div>
-                  <dt>状态</dt>
-                  <dd>{{ activeDevice.status }}</dd>
-                </div>
-                <div>
-                  <dt>最近心跳</dt>
-                  <dd>{{ formatDate(activeDevice.lastHeartbeat) }}</dd>
-                </div>
-              </dl>
-            </article>
-            <article v-else class="card info-card muted-card">
-              <p>暂无设备绑定，请检查硬件状态。</p>
-            </article>
-          </div>
+          <article class="card info-card device-card" v-if="activeDevice">
+            <header>
+              <span>设备信息</span>
+              <strong>{{ activeDevice.deviceName }}</strong>
+            </header>
+            <dl>
+              <div>
+                <dt>设备 ID</dt>
+                <dd>{{ activeDevice.deviceId }}</dd>
+              </div>
+              <div>
+                <dt>设备类型</dt>
+                <dd>{{ activeDevice.modelType }}</dd>
+              </div>
+              <div>
+                <dt>当前状态</dt>
+                <dd>{{ activeDevice.status }}</dd>
+              </div>
+              <div>
+                <dt>最近心跳</dt>
+                <dd>{{ formatDate(activeDevice.lastHeartbeat) }}</dd>
+              </div>
+            </dl>
+          </article>
+          <article v-else class="card info-card muted-card">
+            <p>暂无设备绑定，请检查硬件状态。</p>
+          </article>
 
           <article class="card alert-table compact">
             <header>
               <div>
                 <p>异常告警列表</p>
-                <span>实时告警，及时查看</span>
+                <span>{{ exceptionSummary.total }} 条告警，点击处理</span>
               </div>
               <button type="button">去处理</button>
             </header>
@@ -315,7 +288,34 @@ function formatDate(value?: string) {
               </table>
             </div>
           </article>
-        </div>
+        </aside>
+      </div>
+
+      <div class="status-grid inline">
+        <article class="card mini-card">
+          <p>监测状态</p>
+          <strong>{{ monitoringStatus.label }}</strong>
+          <span>{{ monitoringStatus.detail }}</span>
+        </article>
+        <article class="card mini-card">
+          <p>异常数量</p>
+          <strong>{{ exceptionSummary.total }}</strong>
+          <span>{{ exceptionSummary.critical }} 条高优先级待处理</span>
+        </article>
+        <article class="card mini-card">
+          <p>呼吸 Respiratory</p>
+          <strong>{{ store.activeRealtime?.breathRate ?? '--' }} 次/分</strong>
+          <span :class="{ up: trendDeltas.breath >= 0, down: trendDeltas.breath < 0 }">
+            {{ trendDeltas.breath >= 0 ? '+' : '' }}{{ trendDeltas.breath }} vs 上一次
+          </span>
+        </article>
+        <article class="card mini-card">
+          <p>心率 Heartbeat</p>
+          <strong>{{ store.activeRealtime?.heartRate ?? '--' }} 次/分</strong>
+          <span :class="{ up: trendDeltas.heart >= 0, down: trendDeltas.heart < 0 }">
+            {{ trendDeltas.heart >= 0 ? '+' : '' }}{{ trendDeltas.heart }} vs 上一次
+          </span>
+        </article>
       </div>
     </div>
     <div v-else class="tab-panel posture-panel">
@@ -333,41 +333,88 @@ function formatDate(value?: string) {
         <div class="posture-layout">
           <div class="posture-visual">
             <div class="posture-cloud">
-              <p>3D 点云示意</p>
-              <span>姿态检测实时云图</span>
+              <p>3D 点云</p>
+              <span>下图展示了点云</span>
+              <em>云图实时更新，可查看坐站行走姿态</em>
             </div>
             <div class="posture-state">
               <p>监测状态</p>
-              <strong>{{ postureDetection.posture || '未知' }}</strong>
-              <span>{{ postureDetection.presence ? '在床监测中' : '未检测到人体' }}</span>
+              <strong>{{ postureDetection.presence ? 'Monitoring status' : '未检测到人体' }}</strong>
+              <span>State：{{ postureDetection.posture || '未知' }}</span>
             </div>
           </div>
-          <div class="status-grid inline">
-            <article class="card mini-card">
-              <p>位姿状态</p>
+          <aside class="posture-side">
+            <article class="card info-card user-card">
+              <header>
+                <span>人员信息</span>
+                <strong>{{ store.activePerson.personName }}</strong>
+              </header>
+              <dl>
+                <div>
+                  <dt>人员 ID</dt>
+                  <dd>{{ store.activePerson.personId }}</dd>
+                </div>
+                <div>
+                  <dt>性别</dt>
+                  <dd>{{ store.activePerson.gender === 'M' ? '男' : '女' }}</dd>
+                </div>
+              </dl>
+            </article>
+            <article class="card info-card device-card" v-if="activeDevice">
+              <header>
+                <span>设备信息</span>
+                <strong>{{ activeDevice.deviceName }}</strong>
+              </header>
+              <dl>
+                <div>
+                  <dt>设备 ID</dt>
+                  <dd>{{ activeDevice.deviceId }}</dd>
+                </div>
+                <div>
+                  <dt>设备类型</dt>
+                  <dd>{{ activeDevice.modelType }}</dd>
+                </div>
+                <div>
+                  <dt>更新时间</dt>
+                  <dd>{{ formatDate(activeDevice.lastHeartbeat) }}</dd>
+                </div>
+              </dl>
+            </article>
+            <article v-else class="card info-card muted-card">
+              <p>暂无设备绑定，请检查硬件状态。</p>
+            </article>
+            <article class="card mini-card posture-cta">
+              <p>姿态跟踪</p>
               <strong>{{ postureDetection.posture || '未知' }}</strong>
-              <span>实时推理</span>
+              <span>{{ postureDetection.fallRisk ? '存在跌倒风险' : '姿态稳定' }}</span>
             </article>
-            <article class="card mini-card">
-              <p>有人/无人</p>
-              <strong>{{ postureDetection.presence ? '有人' : '无人' }}</strong>
-              <span>{{ postureDetection.presence ? '监测中' : '未占床' }}</span>
-            </article>
-            <article class="card mini-card">
-              <p>心率</p>
-              <strong>{{ postureDetection.heartRate ?? '--' }} 次/分</strong>
-              <span>传感器快照</span>
-            </article>
-            <article class="card mini-card">
-              <p>呼吸</p>
-              <strong>{{ postureDetection.breathRate ?? '--' }} 次/分</strong>
-              <span>传感器快照</span>
-            </article>
-          </div>
+          </aside>
+        </div>
+        <div class="status-grid inline">
+          <article class="card mini-card">
+            <p>位姿状态</p>
+            <strong>{{ postureDetection.posture || '未知' }}</strong>
+            <span>实时推理</span>
+          </article>
+          <article class="card mini-card">
+            <p>有人/无人</p>
+            <strong>{{ postureDetection.presence ? '有人' : '无人' }}</strong>
+            <span>{{ postureDetection.presence ? '监测中' : '未占床' }}</span>
+          </article>
+          <article class="card mini-card">
+            <p>心率</p>
+            <strong>{{ postureDetection.heartRate ?? '--' }} 次/分</strong>
+            <span>传感器快照</span>
+          </article>
+          <article class="card mini-card">
+            <p>呼吸</p>
+            <strong>{{ postureDetection.breathRate ?? '--' }} 次/分</strong>
+            <span>传感器快照</span>
+          </article>
         </div>
         <div class="posture-meta">
-          <p>设备 · {{ postureDetection.deviceName }} · {{ postureDetection.deviceId }}</p>
-          <p>人员 · {{ postureDetection.personName || store.activePerson.personName }}</p>
+          <p>设备 · {{ postureDetection?.deviceName }} · {{ postureDetection?.deviceId }}</p>
+          <p>人员 · {{ postureDetection?.personName || store.activePerson.personName }}</p>
         </div>
       </article>
       <article v-else class="card chart-card muted-card">
@@ -454,13 +501,7 @@ function formatDate(value?: string) {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 1rem;
-  align-items: start;
-}
-
-.chart-column {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
+  align-items: stretch;
 }
 
 .card {
@@ -470,6 +511,20 @@ function formatDate(value?: string) {
   border: 1px solid rgba(15, 23, 42, 0.05);
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
   color: #0f172a;
+}
+
+.waveform-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.waveform-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(110, 231, 243, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 10%, rgba(168, 85, 247, 0.12), transparent 45%);
+  pointer-events: none;
 }
 
 .chart-card {
@@ -532,6 +587,13 @@ function formatDate(value?: string) {
   height: 100%;
 }
 
+.chart-footer {
+  display: flex;
+  justify-content: space-between;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
 .empty {
   margin: 0;
   color: #94a3b8;
@@ -560,15 +622,9 @@ function formatDate(value?: string) {
   color: #ef4444;
 }
 
-.info-blocks {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.info-pair {
+.side-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-rows: auto auto 1fr;
   gap: 0.8rem;
 }
 
@@ -653,7 +709,7 @@ tbody tr + tr {
 
 .posture-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: 1.3fr 1fr;
   gap: 0.9rem;
   align-items: stretch;
 }
@@ -682,6 +738,12 @@ tbody tr + tr {
   color: #94a3b8;
 }
 
+.posture-cloud em {
+  display: block;
+  color: #a855f7;
+  margin-top: 0.4rem;
+}
+
 .posture-state {
   background: #0f172a;
   color: white;
@@ -694,6 +756,16 @@ tbody tr + tr {
 
 .posture-state span {
   color: rgba(255, 255, 255, 0.8);
+}
+
+.posture-side {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+}
+
+.posture-cta {
+  background: linear-gradient(135deg, rgba(110, 231, 243, 0.2), rgba(168, 85, 247, 0.2));
 }
 
 .posture-meta {
@@ -715,6 +787,10 @@ tbody tr + tr {
 
   .tab-bar {
     align-self: flex-end;
+  }
+
+  .posture-layout {
+    grid-template-columns: 1fr;
   }
 }
 </style>
