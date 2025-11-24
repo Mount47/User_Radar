@@ -15,7 +15,7 @@ export { deviceApi } from './radar-devices/devices'
 export { ti6843VitalApi } from './radar-devices/ti6843Vital'
 export { ti6843PostureApi } from './radar-devices/ti6843Posture'
 export { detectionApi, deviceStatusStreamApi } from './radar-devices/realtime'
-export { wsApi } from './radar-devices/ws'
+export { wsApi } from './websocket'
 
 // Diagnostics
 export { diagnosticsApi } from './diagnostics/diagnostics'
