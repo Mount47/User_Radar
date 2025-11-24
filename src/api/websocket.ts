@@ -6,7 +6,7 @@ import {
   ti6843VitalWS,
   ti6843PostureWS,
   fallAlertWS
-} from '@/utils/websocket'
+} from '@/utils/ws'
 
 /**
  * Thin wrappers so Vue components can import from a single API module.
