@@ -139,7 +139,7 @@ function formatDate(value?: string) {
       <div>
         <p class="eyebrow">实时监测</p>
         <h1>实时数据监控中心</h1>
-        <p class="muted">切换模式查看呼吸心跳波形或人体位姿云图，所有提示均为中文。</p>
+        <p class="muted">切换模式查看呼吸心跳波形或人体位姿</p>
       </div>
       <div class="controls">
         <label class="select-field">

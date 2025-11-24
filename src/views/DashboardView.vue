@@ -69,7 +69,7 @@ async function syncLatest() {
           </div>
         </div>
         <button type="button" class="ghost" :disabled="refreshing" @click="syncLatest">
-          {{ refreshing ? '同步中...' : '同步接口数据' }}
+          <!-- {{ refreshing ? '同步中...' : '同步接口数据' }} -->
         </button>
       </div>
     </div>
