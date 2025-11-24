@@ -8,7 +8,7 @@ export const deviceStatusApi = {
     return http.get('/api/device-status/overview')
   },
 
-  deviceStatus(deviceId) {
+  deviceStatus(deviceId: string) {
     return http.get(`/api/device-status/${deviceId}`)
   },
 

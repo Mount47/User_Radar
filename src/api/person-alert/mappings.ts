@@ -8,67 +8,67 @@ export const mappingApi = {
     return http.get('/api/person-device-mappings')
   },
 
-  getById(id) {
+  getById(id: string) {
     return http.get(`/api/person-device-mappings/${id}`)
   },
 
-  create(payload) {
+  create(payload: Record<string, unknown>) {
     return http.post('/api/person-device-mappings', payload)
   },
 
-  update(id, payload) {
+  update(id: string, payload: Record<string, unknown>) {
     return http.put(`/api/person-device-mappings/${id}`, payload)
   },
 
-  deleteById(id) {
+  deleteById(id: string) {
     return http.delete(`/api/person-device-mappings/${id}`)
   },
 
-  deleteByDevice(deviceId) {
+  deleteByDevice(deviceId: string) {
     return http.delete(`/api/person-device-mappings/device/${deviceId}`)
   },
 
-  deleteByPerson(personId) {
+  deleteByPerson(personId: string) {
     return http.delete(`/api/person-device-mappings/person/${personId}`)
   },
 
-  deleteBatch(payload) {
+  deleteBatch(payload: Record<string, unknown>) {
     return http.delete('/api/person-device-mappings/batch', {}, { data: payload })
   },
 
-  swap(payload) {
+  swap(payload: Record<string, unknown>) {
     return http.post('/api/person-device-mappings/swap', payload)
   },
 
-  swapPersons(payload) {
+  swapPersons(payload: Record<string, unknown>) {
     return http.post('/api/person-device-mappings/swap-persons', payload)
   },
 
-  batchSafeUpdate(payload) {
+  batchSafeUpdate(payload: Record<string, unknown>) {
     return http.put('/api/person-device-mappings/batch-safe', payload)
   },
 
-  batchUpdate(payload) {
+  batchUpdate(payload: Record<string, unknown>) {
     return http.put('/api/person-device-mappings/batch', payload)
   },
 
-  multiBind(payload) {
+  multiBind(payload: Record<string, unknown>) {
     return http.post('/api/person-device-mappings/multi-bind', payload)
   },
 
-  createWithMetadata(payload) {
+  createWithMetadata(payload: Record<string, unknown>) {
     return http.post('/api/person-device-mappings/create', payload)
   },
 
-  switchDevice(payload) {
+  switchDevice(payload: Record<string, unknown>) {
     return http.post('/api/person-device-mappings/switch', payload)
   },
 
-  deactivate(id) {
+  deactivate(id: string) {
     return http.put(`/api/person-device-mappings/${id}/deactivate`)
   },
 
-  reactivate(id) {
+  reactivate(id: string) {
     return http.put(`/api/person-device-mappings/${id}/reactivate`)
   },
 
@@ -76,35 +76,35 @@ export const mappingApi = {
     return http.get('/api/person-device-mappings/inactive')
   },
 
-  cleanupInactive(payload = {}) {
+  cleanupInactive(payload: Record<string, unknown> = {}) {
     return http.delete('/api/person-device-mappings/cleanup', {}, { data: payload })
   },
 
-  devicesByPerson(personId) {
+  devicesByPerson(personId: string) {
     return http.get(`/api/person-device-mappings/person/${personId}/devices`)
   },
 
-  devicesByPersonAndModel(personId, modelType) {
+  devicesByPersonAndModel(personId: string, modelType: string) {
     return http.get(
       `/api/person-device-mappings/person/${personId}/devices/model-type/${modelType}`
     )
   },
 
-  mappingsByPerson(personId) {
+  mappingsByPerson(personId: string) {
     return http.get(`/api/person-device-mappings/person/${personId}/mappings`)
   },
 
-  mappingsByPersonAndModel(personId, modelType) {
+  mappingsByPersonAndModel(personId: string, modelType: string) {
     return http.get(
       `/api/person-device-mappings/person/${personId}/mappings/model-type/${modelType}`
     )
   },
 
-  mappingsByDevice(deviceId) {
+  mappingsByDevice(deviceId: string) {
     return http.get(`/api/person-device-mappings/device/${deviceId}/all`)
   },
 
-  activeByModel(modelType) {
+  activeByModel(modelType: string) {
     return http.get(`/api/person-device-mappings/active/model-type/${modelType}`)
   },
 
@@ -112,7 +112,7 @@ export const mappingApi = {
     return http.get('/api/person-device-mappings/statistics')
   },
 
-  hasActiveMapping(deviceId) {
+  hasActiveMapping(deviceId: string) {
     return http.get(`/api/person-device-mappings/device/${deviceId}/has-active`)
   }
 }

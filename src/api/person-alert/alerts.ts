@@ -8,7 +8,7 @@ export const fallAlertApi = {
     return http.get(`${FALL_BASE}/health`)
   },
 
-  list(params = {}) {
+  list(params: Record<string, unknown> = {}) {
     return http.get(FALL_BASE, params)
   },
 
@@ -16,65 +16,65 @@ export const fallAlertApi = {
     return http.get(`${FALL_BASE}/active`)
   },
 
-  getById(id) {
+  getById(id: string) {
     return http.get(`${FALL_BASE}/${id}`)
   },
 
-  activeByDevice(deviceId) {
+  activeByDevice(deviceId: string) {
     return http.get(`${FALL_BASE}/device/${deviceId}/active`)
   },
 
-  activeByPerson(personId) {
+  activeByPerson(personId: string) {
     return http.get(`${FALL_BASE}/person/${personId}/active`)
   },
 
-  range(params = {}) {
+  range(params: Record<string, unknown> = {}) {
     return http.get(`${FALL_BASE}/timerange`, params)
   },
 
-  rangeByDevice(deviceId, params = {}) {
+  rangeByDevice(deviceId: string, params: Record<string, unknown> = {}) {
     return http.get(`${FALL_BASE}/device/${deviceId}/timerange`, params)
   },
 
-  rangeByPerson(personId, params = {}) {
+  rangeByPerson(personId: string, params: Record<string, unknown> = {}) {
     return http.get(`${FALL_BASE}/person/${personId}/timerange`, params)
   },
 
-  markPending(id, payload = {}) {
+  markPending(id: string, payload: Record<string, unknown> = {}) {
     return http.post(`${FALL_BASE}/${id}/pending`, payload)
   },
 
-  markResolved(id, payload = {}) {
+  markResolved(id: string, payload: Record<string, unknown> = {}) {
     return http.post(`${FALL_BASE}/${id}/resolved`, payload)
   },
 
-  markFalseAlarm(id, payload = {}) {
+  markFalseAlarm(id: string, payload: Record<string, unknown> = {}) {
     return http.post(`${FALL_BASE}/${id}/false-alarm`, payload)
   },
 
-  statistics(params = {}) {
+  statistics(params: Record<string, unknown> = {}) {
     return http.get(`${FALL_BASE}/statistics`, params)
   }
 }
 
 export const vitalsAlertApi = {
-  list(params = {}) {
+  list(params: Record<string, unknown> = {}) {
     return http.get(VITAL_ALERT_BASE, params)
   },
 
-  getById(id) {
+  getById(id: string) {
     return http.get(`${VITAL_ALERT_BASE}/${id}`)
   },
 
-  byDevice(deviceId, params = {}) {
+  byDevice(deviceId: string, params: Record<string, unknown> = {}) {
     return http.get(`${VITAL_ALERT_BASE}/device/${deviceId}`, params)
   },
 
-  byPerson(personId, params = {}) {
+  byPerson(personId: string, params: Record<string, unknown> = {}) {
     return http.get(`${VITAL_ALERT_BASE}/person/${personId}`, params)
   },
 
-  range(params = {}) {
+  range(params: Record<string, unknown> = {}) {
     return http.get(`${VITAL_ALERT_BASE}/timerange`, params)
   }
 }

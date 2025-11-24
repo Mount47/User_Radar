@@ -3,7 +3,7 @@ import http from '../httpClient'
 const DETECTION_BASE = '/api/detection'
 
 export const detectionApi = {
-  statusByDevice(deviceId) {
+  statusByDevice(deviceId: string) {
     return http.get(`${DETECTION_BASE}/status/${deviceId}`)
   },
 
@@ -11,7 +11,7 @@ export const detectionApi = {
     return http.get(`${DETECTION_BASE}/status/all`)
   },
 
-  statusesByModel(modelType) {
+  statusesByModel(modelType: string) {
     return http.get(`${DETECTION_BASE}/status/model-type/${modelType}`)
   },
 
@@ -21,7 +21,7 @@ export const detectionApi = {
 }
 
 export const deviceStatusStreamApi = {
-  heartbeat(deviceId) {
+  heartbeat(deviceId: string) {
     return http.get(`/api/device-status/${deviceId}`)
   }
 }

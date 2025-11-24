@@ -8,27 +8,27 @@ export const personApi = {
     return http.get('/api/persons')
   },
 
-  getById(personId) {
+  getById(personId: string) {
     return http.get(`/api/persons/${personId}`)
   },
 
-  search(query) {
+  search(query: string) {
     return http.get('/api/persons/search', { name: query })
   },
 
-  listByDepartment(department) {
+  listByDepartment(department: string) {
     return http.get(`/api/persons/department/${encodeURIComponent(department)}`)
   },
 
-  create(payload) {
+  create(payload: Record<string, unknown>) {
     return http.post('/api/persons', payload)
   },
 
-  update(personId, payload) {
+  update(personId: string, payload: Record<string, unknown>) {
     return http.put(`/api/persons/${personId}`, payload)
   },
 
-  remove(personId) {
+  remove(personId: string) {
     return http.delete(`/api/persons/${personId}`)
   }
 }

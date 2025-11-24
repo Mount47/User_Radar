@@ -9,70 +9,70 @@ export const ti6843VitalApi = {
     return http.get(DEVICE_BASE)
   },
 
-  getDevice(deviceId) {
+  getDevice(deviceId: string) {
     return http.get(`${DEVICE_BASE}/${deviceId}`)
   },
 
-  createDevice(payload) {
+  createDevice(payload: Record<string, unknown>) {
     return http.post(DEVICE_BASE, payload)
   },
 
-  updateDevice(deviceId, payload) {
+  updateDevice(deviceId: string, payload: Record<string, unknown>) {
     return http.put(`${DEVICE_BASE}/${deviceId}`, payload)
   },
 
-  deleteDevice(deviceId) {
+  deleteDevice(deviceId: string) {
     return http.delete(`${DEVICE_BASE}/${deviceId}`)
   },
 
   // Realtime data
-  realtimeByDevice(deviceId) {
+  realtimeByDevice(deviceId: string) {
     return http.get(`${DATA_BASE}/realtime/${deviceId}`)
   },
 
-  realtimeByPerson(personId) {
+  realtimeByPerson(personId: string) {
     return http.get(`${DATA_BASE}/person/${personId}/realtime`)
   },
 
   // Sliding-window data snapshots
-  latestSamplesByDevice(deviceId, params = {}) {
+  latestSamplesByDevice(deviceId: string, params: Record<string, unknown> = {}) {
     return http.get(`${DATA_BASE}/data/device/${deviceId}`, params)
   },
 
-  samplesByDeviceInRange(deviceId, params) {
+  samplesByDeviceInRange(deviceId: string, params: Record<string, unknown>) {
     return http.get(`${DATA_BASE}/data/device/${deviceId}/timerange`, params)
   },
 
-  samplesByPerson(personId, params = {}) {
+  samplesByPerson(personId: string, params: Record<string, unknown> = {}) {
     return http.get(`${DATA_BASE}/person/${personId}/data`, params)
   },
 
-  samplesByPersonInRange(personId, params) {
+  samplesByPersonInRange(personId: string, params: Record<string, unknown>) {
     return http.get(`${DATA_BASE}/person/${personId}/data/timerange`, params)
   },
 
   // Historical aggregation
-  historical(params = {}) {
+  historical(params: Record<string, unknown> = {}) {
     return http.get(`${DATA_BASE}/historical`, params)
   },
 
-  historicalByDevice(deviceId, params) {
+  historicalByDevice(deviceId: string, params: Record<string, unknown>) {
     return http.get(`${DATA_BASE}/historical/device/${deviceId}/timerange`, params)
   },
 
-  historicalByPerson(personId, params) {
+  historicalByPerson(personId: string, params: Record<string, unknown>) {
     return http.get(`${DATA_BASE}/person/${personId}/historical`, params)
   },
 
-  historicalByPersonRange(personId, params) {
+  historicalByPersonRange(personId: string, params: Record<string, unknown>) {
     return http.get(`${DATA_BASE}/person/${personId}/historical/timerange`, params)
   },
 
-  historicalSummary(params = {}) {
+  historicalSummary(params: Record<string, unknown> = {}) {
     return http.get(`${DATA_BASE}/historical/summary`, params)
   },
 
-  historicalSummaryByPerson(personId, params = {}) {
+  historicalSummaryByPerson(personId: string, params: Record<string, unknown> = {}) {
     return http.get(`${DATA_BASE}/person/${personId}/historical/summary`, params)
   }
 }

@@ -8,31 +8,31 @@ export const userApi = {
     return http.get('/api/users')
   },
 
-  getById(id) {
+  getById(id: string) {
     return http.get(`/api/users/${id}`)
   },
 
-  create(payload) {
+  create(payload: Record<string, unknown>) {
     return http.post('/api/users', payload)
   },
 
-  update(id, payload) {
+  update(id: string, payload: Record<string, unknown>) {
     return http.put(`/api/users/${id}`, payload)
   },
 
-  remove(id) {
+  remove(id: string) {
     return http.delete(`/api/users/${id}`)
   },
 
-  resetPassword(id, payload) {
+  resetPassword(id: string, payload: Record<string, unknown>) {
     return http.post(`/api/users/${id}/reset-password`, payload)
   },
 
-  lock(id) {
+  lock(id: string) {
     return http.post(`/api/users/${id}/lock`)
   },
 
-  unlock(id) {
+  unlock(id: string) {
     return http.post(`/api/users/${id}/unlock`)
   }
 }

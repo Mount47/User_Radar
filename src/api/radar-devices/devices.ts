@@ -4,7 +4,7 @@ import http from '../httpClient'
  * Radar device & status endpoints.
  */
 export const deviceApi = {
-  list(params = {}) {
+  list(params: Record<string, unknown> = {}) {
     return http.get('/api/radar/devices', params)
   },
 
@@ -12,19 +12,19 @@ export const deviceApi = {
     return http.get('/api/radar/devices/list')
   },
 
-  getById(deviceId) {
+  getById(deviceId: string) {
     return http.get(`/api/radar/devices/${deviceId}`)
   },
 
-  create(payload) {
+  create(payload: Record<string, unknown>) {
     return http.post('/api/radar/devices', payload)
   },
 
-  update(deviceId, payload) {
+  update(deviceId: string, payload: Record<string, unknown>) {
     return http.put(`/api/radar/devices/${deviceId}`, payload)
   },
 
-  remove(deviceId) {
+  remove(deviceId: string) {
     return http.delete(`/api/radar/devices/${deviceId}`)
   }
 }

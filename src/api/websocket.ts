@@ -12,15 +12,15 @@ import {
  * Thin wrappers so Vue components can import from a single API module.
  */
 export const wsApi = {
-  radarStream(deviceId) {
+  radarStream(deviceId: string) {
     return r60abd1WS(deviceId)
   },
 
-  ti6843Vital(deviceId) {
+  ti6843Vital(deviceId: string) {
     return ti6843VitalWS(deviceId)
   },
 
-  ti6843Posture(deviceId) {
+  ti6843Posture(deviceId: string) {
     return ti6843PostureWS(deviceId)
   },
 
@@ -28,15 +28,15 @@ export const wsApi = {
     return fallAlertWS()
   },
 
-  vitalSigns(deviceId) {
+  vitalSigns(deviceId: string) {
     return vitalSignsWS(deviceId)
   },
 
-  posture(deviceId) {
+  posture(deviceId: string) {
     return postureWS(deviceId)
   },
 
-  ecg(deviceId) {
+  ecg(deviceId: string) {
     return ecgWS(deviceId)
   }
 }
